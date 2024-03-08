@@ -23,6 +23,7 @@ Automated market maker for Footium
 - (TODO) Add a buy page allows you to buy from the list of players you have
 - (BLOCKED) Frontend selling directly to the smart contract
 - (BLOCKED) Frontend buying directly from the smart contract
+- (BLOCKED) Show a list of transactions on the platform, buy and sell
 
 ## TODO - James
 
