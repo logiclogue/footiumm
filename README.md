@@ -28,5 +28,6 @@ Automated market maker for Footium
 
 - (TODO) Create the hardhat project
 - (TODO) Write the contract template
+- (TODO) Create a floor pricing mechanism for players
 - (TODO) Add in the ability to buy
-- (TODO) Add in the ability to sell
+- (TODO) Add in the ability to sell (dutch auction)
