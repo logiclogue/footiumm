@@ -65,11 +65,10 @@ describe("FootiuMM", function () {
     })
 
     context("Testing the AMM", async function () { 
-        context("Testing the functionality of the NFTtoETH method", async function () {
+        context("Testing the selling functionality of the NFTtoETH method", async function () {
             beforeEach(async function () {
                 // donate ETH
                 await FootiuMM.donateEth({value:ethers.parseEther("10")})
-
 
                 // donate NFTs
                 TestNFT.mint(owner.address, 3);
@@ -113,13 +112,13 @@ describe("FootiuMM", function () {
                 const contractUpdateBalance = await ethers.provider.getBalance(FootiuMM.target)
                 expect(contractUpdateBalance).to.equal(8000000000000000000n)
                 const userUpdatedBalance = await ethers.provider.getBalance(user.address)
-                const balanceChange = userUpdatedBalance - userInitialBalance 
+                const balanceChange = userUpdatedBalance - userInitialBalance;
                 //expect(balanceChange).to.equal(1999891938048771278n)
             })
     
         })
     
-        context("Testing the functionality of the ETHtoNFT method", async function () {
+        context("Testing the buying functionality of the ETHtoNFT method", async function () {
                 beforeEach(async function () {
                     // donate ETH
                     await FootiuMM.donateEth({value:ethers.parseEther("10")})
