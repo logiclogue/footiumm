@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.0;
+
+// Uncomment this line to use console.log
+// import "hardhat/console.sol";
+
+contract FootiuMM {
+    address public dependencyAddress;
+
+    constructor(address _dependencyAddress) {
+        dependencyAddress = _dependencyAddress;
+    }
+}
+
+
