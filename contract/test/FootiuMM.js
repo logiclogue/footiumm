@@ -46,21 +46,43 @@ describe("FootiuMM", function () {
         it("should start with 0.1ETH", async function () {
             expect(await FootiuMM.getContractBalance()).to.equal(100000000000000000n)  
         })
-
     })
 
-    context("Testing the functionality of the NF", async function () {
-        it("a user sells an NFT in return for 0.05ETH", async function () {
+    context("Testing the functionality of the NFTtoETH method", async function () {
+        beforeEach(async function () {
             // Approve the contract to transfer the NFT
             await TestNFT.connect(user).approve(FootiuMM.target, 1); // Assuming tokenId 1
-    
+
             // Perform NFT to ETH swap
             const tx = await FootiuMM.connect(user).NFTtoETHSwap(1); // Assuming tokenId 1
-            
-            //The smart contract's contract balance is updated 
+
+        })
+
+        it("removes 0.05ETH from the pool", async function () {    
             expect(await FootiuMM.getContractBalance()).to.equal(50000000000000000n)  
+        })    
+
+        it("increments the number of NFTs on sale", async function () {    
             expect(await FootiuMM.getNFTsForSale()).to.equal(1)
-            
+        })    
+    })
+
+    context("Testing the functionality of the ETHtoNFT method", async function () {
+        beforeEach(async function () {
+            // Approve the contract to transfer the NFT
+            await TestNFT.connect(user).approve(FootiuMM.target, 1); // Assuming tokenId 1
+            // Perform NFT to ETH swap
+            await FootiuMM.connect(user).NFTtoETHSwap(1); // Assuming tokenId 1
+            const SendValue = ethers.parseEther("0.05");
+            await FootiuMM.connect(user).ETHtoNFTSwap(
+                1,
+                {value: SendValue}
+                ); // Assuming tokenId 1
+
+        })
+
+        it("adds 0.05ETH to the pool", async function () {    
+            expect(await FootiuMM.getContractBalance()).to.equal(100000000000000000n)  
         })    
     })
       
