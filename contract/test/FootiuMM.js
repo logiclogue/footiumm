@@ -103,11 +103,7 @@ describe("FootiuMM", function () {
 
                 
                 await FootiuMM.connect(user).NFTtoETH(1); // Assuming tokenId 1
-                expect(
-                    await TestNFT.balanceOf(user.address)
-                ).to.equal(
-                    1
-                )
+
                 expect(await FootiuMM.numNFTs()).to.equal(5)                    
                 expect(
                     await TestNFT.balanceOf(user.address)
@@ -153,22 +149,16 @@ describe("FootiuMM", function () {
 
                 it("buys an NFT from the pool", async function () { 
 
-                    //There is initially 4 NFTs, and 10 ETH
-                    // Approve the contract to transfer the NFT
-
-                    //need to approve to transfer the ETH
-
-                    await TestNFT.connect(user).approve(FootiuMM.target, 1); // Assuming tokenId 1
-                    // Perform NFT to ETH swap
-                    const userInitialBalance = await ethers.provider.getBalance(user.address)
-    
-                    
-                    await FootiuMM.connect(user).NFTtoETH(1); // Assuming tokenId 1
                     expect(
                         await TestNFT.balanceOf(user.address)
                     ).to.equal(
-                        1
+                        2
                     )
+
+                    // Perform NFT to ETH swap
+                    const userInitialBalance = await ethers.provider.getBalance(user.address)
+                    
+                    await FootiuMM.connect(user).ETHforNFT(1); // Assuming tokenId 1
                     expect(await FootiuMM.numNFTs()).to.equal(5)                    
                     expect(
                         await TestNFT.balanceOf(user.address)

@@ -66,8 +66,8 @@ contract FootiuMM is IERC721Receiver {
         recipient.transfer(ETHpayout);
 
         emit PlayerforETH(recipient, _tokenId);
-
     }
+    
     //A player buying an NFT with ETH - sending  ETH
     function ETHforNFT(uint256 _tokenId) public payable {
         uint256 k_value = (
@@ -91,7 +91,6 @@ contract FootiuMM is IERC721Receiver {
         recipient.transfer(ETHprice);
 
         emit ETHforPlayer(recipient, _tokenId);
-
     }
 
     /* Implementing Getter Functions  */
