@@ -83,11 +83,20 @@ contract FootiuMM is IERC721Receiver {
     /*Bonding Curve Logic */
 
     // Calculate the price to buy NFTs based on the bonding curve 
-    function calculateTokenPrice() public returns (uint256) {
-   
-        uint256 timeElapsed = block.timestamp - currentAuction.timeStart;
+    function calculateTokenPrice(
+        uint256 blockTimeStamp, 
+        uint256 currentAuctionTimeStart
+    ) public returns (uint256) {
+        
+        require(
+            blockTimeStamp > currentAuctionTimeStart, 
+            "time must have passed"
+        );
+        
+        uint256 timeElapsed = blockTimeStamp - currentAuctionTimeStart;
+
         uint256 currentPrice = startingPrice >> (timeElapsed / decayRate);
-        console.log('timeElapsed',vt);
+
         console.log('startingPrice',startingPrice);
         console.log('currentPrice',currentPrice);
         return currentPrice;
@@ -115,7 +124,10 @@ contract FootiuMM is IERC721Receiver {
     /*a user is selling an NFT to the contract*/
     function NFTtoETHSwap(uint256 tokenId) public {
         // Transfer the NFT to this contract
-        uint256 salePrice = calculateTokenPrice();
+        uint256 salePrice = calculateTokenPrice(
+            block.timestamp,
+            currentAuction.timeStart
+        );
 
         require(
             address(this).balance >= salePrice,
@@ -132,7 +144,6 @@ contract FootiuMM is IERC721Receiver {
             updateAuction(tokenId);
         }
 
-        payable(msg.sender).transfer(salePrice);
 
         // Store the deposited NFT
         nftDeposits[msg.sender].push(NftDeposit(tokenId));
@@ -140,6 +151,7 @@ contract FootiuMM is IERC721Receiver {
 
         // Send ETH to the swapper
         address payable recipient = payable(msg.sender);
+
         recipient.transfer(salePrice); 
 
         // Emit event
@@ -148,7 +160,10 @@ contract FootiuMM is IERC721Receiver {
     
 
     function ETHtoNFTSwap(uint256 _tokenId) external payable {
-        uint256 salePrice = calculateTokenPrice();
+        uint256 salePrice = calculateTokenPrice(
+            block.timestamp,
+            currentAuction.timeStart
+        );
 
         require(msg.value >= salePrice, "Insufficient payment");
 

@@ -49,6 +49,11 @@ describe("FootiuMM", function () {
         })
     })
 
+    context("Testing the calculateTokenPrice", async function () {
+        const val = await FootiuMM.calculateTokenPrice(1000, 100);
+
+    })
+
     context("Testing the functionality of the NFTtoETH method", async function () {
         beforeEach(async function () {
             // Approve the contract to transfer the NFT
