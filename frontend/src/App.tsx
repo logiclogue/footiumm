@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ContextProvider, config } from './WagmiContextProvider';
-import { useAccount, useReadContract, useWatchContractEvent } from "wagmi";
-import { ethers } from 'ethers';
+import { useAccount, useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
+import * as ethers from 'ethers';
 import { useEthersProvider } from './ethers';
 import './App.css';
+
+const ENABLE_DONATIONS = true;
 
 function ConnectButton() {
     return <w3m-button />;
@@ -169,6 +171,44 @@ function Players() {
     );
 }
 
+function DonateETH() {
+    const { isConnected } = useAccount();
+    const { writeContract } = useWriteContract();
+    const { address, abi } = useLoadContract("FootiuMM");
+
+    const handleDonate = (e: any) => {
+        e.preventDefault();
+        const amount = e.target.elements.amount.value;
+
+        (writeContract as any)({
+            abi,
+            address,
+            functionName: "donateEth",
+            value: ethers.parseUnits(amount, "ether")
+        });
+    };
+
+    if (!isConnected) {
+        return <div>...</div>;
+    }
+
+    return (
+        <form onSubmit={handleDonate}>
+            <input
+                type="text"
+                name="amount"
+                placeholder="ETH amount"
+                required
+            />
+            <button type="submit">Donate ETH</button>
+        </form>
+    );
+}
+
+function CurrentPool() {
+    return <div>TODO</div>;
+}
+
 function App() {
     return (
         <ContextProvider>
@@ -176,7 +216,17 @@ function App() {
                 <header className="App-header">
                     <div>FootiuMM</div>
                     <ConnectButton />
-                    <h2>Sell NFTs:</h2>
+                    <h2>Current Pool</h2>
+                    <CurrentPool />
+                    {
+                        ENABLE_DONATIONS ?
+                        <div>
+                            <h2>Donate ETH</h2>
+                            <DonateETH />
+                        </div>
+                        : <div></div>
+                    }
+                    <h2>Sell NFTs</h2>
                     <Players />
                     <h2>Buy NFTs</h2>
                 </header>
