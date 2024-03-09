@@ -13,4 +13,8 @@ contract TestNFT is ERC721 {
     function burn(uint256 tokenId) public {
         _burn(tokenId);
     }
+
+    function getUserBalance(address user) public view returns (uint256) {
+        return balanceOf(user);
+    }
 }

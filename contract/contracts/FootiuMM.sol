@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-// Uncomment this line to use console.log
 import "hardhat/console.sol";
 
 contract FootiuMM is IERC721Receiver {
@@ -17,49 +15,25 @@ contract FootiuMM is IERC721Receiver {
 
     address public dependencyAddress;
 
-    struct NftDeposit {
-        uint256 tokenId;
-    }
-    struct Auction {
-        bool isAuction;
-        uint256 timeStart;
-        uint256[] tokenIds; 
-    }
-
-    mapping(address => NftDeposit[]) public nftDeposits;
-
-    Auction public currentAuction;
     uint256 public numNFTs;
-    uint256 public decayRate;
-    uint256 public startingPrice;
-    uint256 public currentPrice;
+    uint256 public totalEthInBalance; 
+    uint256[] public ForSaleNFTs;
 
-    uint256 public totalEthInBalance;
-
-    uint256 public constant INITIAL_STARTING_PRICE = 1 ether;
-    uint256 public constant EXPONENT = 2; // Exponent for the exponential decay function
-
-    bool public isAuction;
-
-    NftDeposit[] public nftsForSale;
-
-    event Create(address indexed nft);
-    event NftDeposited(address indexed user, address indexed nftContract, uint256 indexed tokenId);
-    event NFTPurchased(address indexed user, uint256 indexed tokenId);
-    event AuctionCreated(uint256 indexed auctionId, address indexed seller, uint256 indexed tokenId, uint256 startingPrice, uint256 duration);
+    event PlayerforETH(address indexed user, uint256 indexed tokenId);
+    event ETHforPlayer(address indexed user, uint256 indexed tokenId);
 
 
-    constructor(address _dependencyAddress, uint256 _decayRate) payable {
+    constructor(address _dependencyAddress) payable {
         nftContract = ERC721(_dependencyAddress);
-        decayRate = _decayRate;
     }
 
-    function donateEth() payable {
+    function donateEth() public payable {
         totalEthInBalance += msg.value;
     }
 
-    function donateNft(uint256 _tokenId) {
+    function donateNft(uint256 _tokenId) public {
         numNFTs += 1;
+        ForSaleNFTs.push(_tokenId); 
     }
 
     /* Implementing IERC721Receiver*/
@@ -69,118 +43,56 @@ contract FootiuMM is IERC721Receiver {
         return IERC721Receiver.onERC721Received.selector;
     }
 
+    //A player selling an NFT for ETH - receiving ETH
+    function NFTtoETH(uint256 _tokenId) public {
 
-    /* Dutch Auction Logic  */
-    function createAuction(uint256 _tokenId) internal {
-        startingPrice = address(this).balance;
-        console.log('startingPrice1',startingPrice);
-        currentAuction.isAuction = true;
-        currentAuction.tokenIds.push(_tokenId);
-    }
-
-    function updateAuction(uint256 _tokenId) internal {
-        currentAuction.isAuction = true;
-    }
-
-    function closeAuction(uint256 _tokenId) internal {
-        currentAuction.isAuction = false;
-    }
-
-
-    /*Bonding Curve Logic */
-
-    // Calculate the price to buy NFTs based on the bonding curve 
-    function calculateTokenPrice(
-        uint256 blockTimeStamp, 
-        uint256 currentAuctionTimeStart
-    ) public returns (uint256) {
-        
-        require(
-            blockTimeStamp > currentAuctionTimeStart, 
-            "time must have passed"
+        uint256 k_value = (
+            ForSaleNFTs.length * address(this).balance
         );
         
-        uint256 timeElapsed = blockTimeStamp - currentAuctionTimeStart;
+        numNFTs += 1;
 
-        uint256 currentPrice = startingPrice >> (timeElapsed / decayRate);
+        uint256 ETHpayout = address(this).balance - (k_value/numNFTs);
 
-        console.log('startingPrice',startingPrice);
-        console.log('currentPrice',currentPrice);
-        return currentPrice;
+        ForSaleNFTs.push(_tokenId);
 
-    }
-
-    // Calculate the price to sell NFTs based on the bonding curve 
-    function calculateTokenSale() public view returns (uint256) {
-        uint256 currentSupply = numNFTs;
-        return currentSupply;
-    }
-
-    /*Help Function*/
-    // Check if a number is in an array
-    function numberExists(uint256[] memory numbers, uint256 number) public view returns (bool) {
-        for (uint256 i = 0; i < numbers.length; i++) {
-            if (numbers[i] == number) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-
-    /*a user is selling an NFT to the contract*/
-    function NFTtoETHSwap(uint256 tokenId) public {
-        // Transfer the NFT to this contract
-        uint256 salePrice = calculateTokenPrice(
-            block.timestamp,
-            currentAuction.timeStart
+        nftContract.safeTransferFrom(
+            msg.sender, 
+            address(this), 
+            _tokenId
         );
 
-        require(
-            address(this).balance >= salePrice,
-            "Insufficient balance"
-        );
-
-        nftContract.safeTransferFrom(msg.sender, address(this), tokenId);
-
-        if (nftsForSale.length == 0) {
-            createAuction(
-                 tokenId
-                );
-        } else {
-            updateAuction(tokenId);
-        }
-
-
-        // Store the deposited NFT
-        nftDeposits[msg.sender].push(NftDeposit(tokenId));
-        nftsForSale.push(NftDeposit(1));
-
-        // Send ETH to the swapper
         address payable recipient = payable(msg.sender);
+        recipient.transfer(ETHpayout);
 
-        recipient.transfer(salePrice); 
+        emit PlayerforETH(recipient, _tokenId);
 
-        // Emit event
-        emit NftDeposited(msg.sender, dependencyAddress, tokenId);
     }
-    
+    //A player buying an NFT with ETH - sending  ETH
+    function ETHforNFT(uint256 _tokenId) public payable {
+        uint256 k_value = (
+            ForSaleNFTs.length * address(this).balance
+        );
+        require(numNFTs > 1, "block");
 
-    function ETHtoNFTSwap(uint256 _tokenId) external payable {
-        uint256 salePrice = calculateTokenPrice(
-            block.timestamp,
-            currentAuction.timeStart
+        numNFTs -= 1;
+
+        uint256 ETHprice = address(this).balance - (k_value/numNFTs);
+
+        ForSaleNFTs.push(_tokenId);
+
+        nftContract.transferFrom(
+            address(this), 
+            msg.sender, 
+            _tokenId
         );
 
-        require(msg.value >= salePrice, "Insufficient payment");
+        address payable recipient = payable(msg.sender);
+        recipient.transfer(ETHprice);
 
-        // Transfer ownership of the NFT to the buyer
-        nftContract.transferFrom(address(this), msg.sender, _tokenId);
+        emit ETHforPlayer(recipient, _tokenId);
 
-        // Emit event
-        emit NFTPurchased(msg.sender, _tokenId);
     }
-
 
     /* Implementing Getter Functions  */
     function getContractBalance() external view returns (uint256) {
@@ -188,7 +100,7 @@ contract FootiuMM is IERC721Receiver {
     }
 
     function getNFTsForSale() external view returns (uint256) {
-        return nftsForSale.length;
+        return ForSaleNFTs.length;
     }
 
 

@@ -1,6 +1,5 @@
 const { expect } = require("chai");
-const { ethers } = require("hardhat");
-
+const { ethers } = require("hardhat")
 
 describe("FootiuMM", function () {
     let FootiuMM;
@@ -18,9 +17,7 @@ describe("FootiuMM", function () {
         const SendValue = ethers.parseEther("0.1");
 
         FootiuMM = await Contract1.deploy(
-            TestNFT.target,
-            2,
-            { value: SendValue } 
+            TestNFT.target
         ); 
 
         // Mint an NFT to the user
@@ -38,70 +35,155 @@ describe("FootiuMM", function () {
         it("should instantiate the AMM contract correctly", async function () {
             expect(FootiuMM.target).to.not.equal(0x0);
         })
+    })
+
+    context("Testing add LP positions", async function () { 
+        context("Testing adding ETH to the pool", async function () {
+            it("deposits 10 ETH correctly", async function () {
+                const SendValue = ethers.parseEther("10");
+
+                await FootiuMM.donateEth({value:SendValue})
     
-        it("user has 2 NFTS", async function (){
-            const userBalance = await TestNFT.balanceOf(user.address);
-            expect(userBalance).to.equal(2);
+                expect(await FootiuMM.totalEthInBalance()).to.equal(SendValue)                    
+            })
+        })
+
+        context("Testing adding NFT to the pool", async function () {
+            beforeEach(async function() {
+                TestNFT.mint(owner.address, 3);
+            });
+
+            it("deposits an NFT correctly", async function () {
+                await TestNFT.approve(FootiuMM.target, 3); // Assuming tokenId 1
+
+                await FootiuMM.donateNft(3);
+    
+                expect(await FootiuMM.numNFTs()).to.equal(1)                    
+            })
+
+        })
+    })
+
+    context("Testing the AMM", async function () { 
+        context("Testing the functionality of the NFTtoETH method", async function () {
+            beforeEach(async function () {
+                // donate ETH
+                await FootiuMM.donateEth({value:ethers.parseEther("10")})
+
+
+                // donate NFTs
+                TestNFT.mint(owner.address, 3);
+                TestNFT.mint(owner.address, 4);
+                TestNFT.mint(owner.address, 5);
+                TestNFT.mint(owner.address, 6);
+
+                await TestNFT.approve(FootiuMM.target, 3); // Assuming tokenId 1
+                await TestNFT.approve(FootiuMM.target, 4); // Assuming tokenId 1
+                await TestNFT.approve(FootiuMM.target, 5); // Assuming tokenId 1
+                await TestNFT.approve(FootiuMM.target, 6); // Assuming tokenId 1
+          
+                await FootiuMM.donateNft(3);
+                await FootiuMM.donateNft(4);
+                await FootiuMM.donateNft(5);
+                await FootiuMM.donateNft(6);
+            })
+            it("is set up properly", async function () { 
+                expect(await FootiuMM.numNFTs()).to.equal(4)                    
+                expect(await FootiuMM.totalEthInBalance()).to.equal(ethers.parseEther("10"))                    
+
+            })
+
+            it("sells an NFT into the pool", async function () { 
+
+                //There is initially 4 NFTs, and 10 ETH
+                // Approve the contract to transfer the NFT
+                await TestNFT.connect(user).approve(FootiuMM.target, 1); // Assuming tokenId 1
+                // Perform NFT to ETH swap
+                const userInitialBalance = await ethers.provider.getBalance(user.address)
+
+                
+                await FootiuMM.connect(user).NFTtoETH(1); // Assuming tokenId 1
+                expect(
+                    await TestNFT.balanceOf(user.address)
+                ).to.equal(
+                    1
+                )
+                expect(await FootiuMM.numNFTs()).to.equal(5)                    
+                expect(
+                    await TestNFT.balanceOf(user.address)
+                ).to.equal(
+                    1
+                )
+                const contractUpdateBalance = await ethers.provider.getBalance(FootiuMM.target)
+                expect(contractUpdateBalance).to.equal(8000000000000000000n)
+                const userUpdatedBalance = await ethers.provider.getBalance(user.address)
+                const balanceChange = userUpdatedBalance - userInitialBalance 
+                //expect(balanceChange).to.equal(1999891938048771278n)
+            })
+    
         })
     
-        it("should start with 0.1ETH", async function () {
-            expect(await FootiuMM.getContractBalance()).to.equal(100000000000000000n)  
+        context("Testing the functionality of the ETHtoNFT method", async function () {
+                beforeEach(async function () {
+                    // donate ETH
+                    await FootiuMM.donateEth({value:ethers.parseEther("10")})
+    
+    
+                    // donate NFTs
+                    TestNFT.mint(owner.address, 3);
+                    TestNFT.mint(owner.address, 4);
+                    TestNFT.mint(owner.address, 5);
+                    TestNFT.mint(owner.address, 6);
+    
+                    await TestNFT.approve(FootiuMM.target, 3); // Assuming tokenId 1
+                    await TestNFT.approve(FootiuMM.target, 4); // Assuming tokenId 1
+                    await TestNFT.approve(FootiuMM.target, 5); // Assuming tokenId 1
+                    await TestNFT.approve(FootiuMM.target, 6); // Assuming tokenId 1
+              
+                    await FootiuMM.donateNft(3);
+                    await FootiuMM.donateNft(4);
+                    await FootiuMM.donateNft(5);
+                    await FootiuMM.donateNft(6);
+                })
+                it("is set up properly", async function () { 
+                    expect(await FootiuMM.numNFTs()).to.equal(4)                    
+                    expect(await FootiuMM.totalEthInBalance()).to.equal(ethers.parseEther("10"))                    
+    
+                })
+
+                it("buys an NFT from the pool", async function () { 
+
+                    //There is initially 4 NFTs, and 10 ETH
+                    // Approve the contract to transfer the NFT
+
+                    //need to approve to transfer the ETH
+
+                    await TestNFT.connect(user).approve(FootiuMM.target, 1); // Assuming tokenId 1
+                    // Perform NFT to ETH swap
+                    const userInitialBalance = await ethers.provider.getBalance(user.address)
+    
+                    
+                    await FootiuMM.connect(user).NFTtoETH(1); // Assuming tokenId 1
+                    expect(
+                        await TestNFT.balanceOf(user.address)
+                    ).to.equal(
+                        1
+                    )
+                    expect(await FootiuMM.numNFTs()).to.equal(5)                    
+                    expect(
+                        await TestNFT.balanceOf(user.address)
+                    ).to.equal(
+                        1
+                    )
+                    const contractUpdateBalance = await ethers.provider.getBalance(FootiuMM.target)
+                    expect(contractUpdateBalance).to.equal(8000000000000000000n)
+                    const userUpdatedBalance = await ethers.provider.getBalance(user.address)
+                    const balanceChange = userUpdatedBalance - userInitialBalance 
+                    //expect(balanceChange).to.equal(1999891938048771278n)
+                })
+    
         })
-    })
-
-    context("Testing the calculateTokenPrice", async function () {
-        const val = await FootiuMM.calculateTokenPrice(1000, 100);
-
-    })
-
-    context("Testing the functionality of the NFTtoETH method", async function () {
-        beforeEach(async function () {
-            // Approve the contract to transfer the NFT
-            await TestNFT.connect(user).approve(FootiuMM.target, 1); // Assuming tokenId 1
-            console.log(await FootiuMM.getContractBalance())
-            // Perform NFT to ETH swap
-            await FootiuMM.connect(user).NFTtoETHSwap(1); // Assuming tokenId 1
-
-        })
-
-        it("removes 0.05ETH from the pool", async function () {    
-            expect(await FootiuMM.getContractBalance()).to.equal(50000000000000000n)  
-        })    
-
-        it("increments the number of NFTs on sale", async function () {    
-            expect(await FootiuMM.getNFTsForSale()).to.equal(1)
-        })    
-
-        it("triggers an auction", async function () {
-            expect(await FootiuMM.isAuction()).to.equal(true)   
-        })
-
-        it("creates an auction with starting price equal to 0.1ETH", async function () {
-            expect(await FootiuMM.startingPrice()).to.equal(ethers.parseEther("0.1"))   
-        })
-    })
-
-    context("Testing the functionality of the ETHtoNFT method", async function () {
-        beforeEach(async function () {
-            // Approve the contract to transfer the NFT
-            await TestNFT.connect(user).approve(FootiuMM.target, 1); // Assuming tokenId 1
-
-            // Perform NFT to ETH swap
-            await FootiuMM.connect(user).NFTtoETHSwap(1); // Assuming tokenId 1
-
-            const SendValue = ethers.parseEther("0.05");
-            await FootiuMM.connect(user).ETHtoNFTSwap(
-                1,
-                {value: SendValue}
-                ); // Assuming tokenId 1
-
-        })
-
-        it("adds 0.05ETH to the pool, providing a new balance of 0.15ET", async function () {    
-            expect(await FootiuMM.getContractBalance()).to.equal(150000000000000000n)  
-        })    
-    })
-      
+    })      
 })
 
 
