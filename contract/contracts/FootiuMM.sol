@@ -62,7 +62,7 @@ contract FootiuMM is IERC721Receiver {
     /*a user is selling an NFT to the contract*/
     function NFTtoETHSwap(uint256 tokenId) external {
         // Transfer the NFT to this contract
-        IERC721(dependencyAddress).safeTransferFrom(msg.sender, address(this), tokenId);
+        nftContract.safeTransferFrom(msg.sender, address(this), tokenId);
 
         uint256 salePrice = calculateTokenPrice();
 
@@ -72,6 +72,7 @@ contract FootiuMM is IERC721Receiver {
 
         // Store the deposited NFT
         nftDeposits[msg.sender].push(NftDeposit(tokenId));
+        nftsForSale.push(NftDeposit(1));
 
         // Emit event
         emit NftDeposited(msg.sender, dependencyAddress, tokenId);
@@ -90,11 +91,15 @@ contract FootiuMM is IERC721Receiver {
     }
 
 
-
     /* Implementing Getter Functions  */
     function getContractBalance() external view returns (uint256) {
         return address(this).balance;
     }
+
+    function getNFTsForSale() external view returns (uint256) {
+        return nftsForSale.length;
+    }
+
 
 
 }
