@@ -54,11 +54,11 @@ contract FootiuMM is IERC721Receiver {
         decayRate = _decayRate;
     }
 
-    function donateEth() payable {
+    function donateEth() public payable {
         totalEthInBalance += msg.value;
     }
 
-    function donateNft(uint256 _tokenId) {
+    function donateNft(uint256 _tokenId) public {
         numNFTs += 1;
     }
 
