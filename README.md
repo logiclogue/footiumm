@@ -17,7 +17,7 @@ Automated market maker for Footium
 ## TODO - Jordan
 
 - (done) Add a frontend React project
-- (TODO) Integrate wallet connect
+- (done) Integrate wallet connect
 - (TODO) Integrate existing Arbitrum Sepolia Footium contracts
 - (TODO) Add a sell page which allows you to sell a player you own
 - (TODO) Add a buy page allows you to buy from the list of players you have
