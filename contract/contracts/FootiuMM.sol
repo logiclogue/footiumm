@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 // Uncomment this line to use console.log
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 
 contract FootiuMM is IERC721Receiver {
 
@@ -23,6 +23,7 @@ contract FootiuMM is IERC721Receiver {
     struct Auction {
         bool isAuction;
         uint256 timeStart;
+        uint256[] tokenIds; 
     }
 
     mapping(address => NftDeposit[]) public nftDeposits;
@@ -65,7 +66,9 @@ contract FootiuMM is IERC721Receiver {
     /* Dutch Auction Logic  */
     function createAuction(uint256 _tokenId) internal {
         startingPrice = address(this).balance;
+        console.log('startingPrice1',startingPrice);
         currentAuction.isAuction = true;
+        currentAuction.tokenIds.push(_tokenId);
     }
 
     function updateAuction(uint256 _tokenId) internal {
@@ -81,15 +84,12 @@ contract FootiuMM is IERC721Receiver {
 
     // Calculate the price to buy NFTs based on the bonding curve 
     function calculateTokenPrice() public returns (uint256) {
-
-        /**
-            value >>= (t / halfLife);
-    t %= halfLife;
-    price = value - value * t / halfLife / 2;
- */     
-        uint256 t = block.timestamp - currentAuction.timeStart;
-        currentPrice >>= (t / decayRate);
-
+   
+        uint256 timeElapsed = block.timestamp - currentAuction.timeStart;
+        uint256 currentPrice = startingPrice >> (timeElapsed / decayRate);
+        console.log('timeElapsed',vt);
+        console.log('startingPrice',startingPrice);
+        console.log('currentPrice',currentPrice);
         return currentPrice;
 
     }
@@ -100,17 +100,29 @@ contract FootiuMM is IERC721Receiver {
         return currentSupply;
     }
 
+    /*Help Function*/
+    // Check if a number is in an array
+    function numberExists(uint256[] memory numbers, uint256 number) public view returns (bool) {
+        for (uint256 i = 0; i < numbers.length; i++) {
+            if (numbers[i] == number) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
     /*a user is selling an NFT to the contract*/
     function NFTtoETHSwap(uint256 tokenId) public {
         // Transfer the NFT to this contract
-        nftContract.safeTransferFrom(msg.sender, address(this), tokenId);
-
         uint256 salePrice = calculateTokenPrice();
 
         require(
             address(this).balance >= salePrice,
             "Insufficient balance"
         );
+
+        nftContract.safeTransferFrom(msg.sender, address(this), tokenId);
 
         if (nftsForSale.length == 0) {
             createAuction(
@@ -126,9 +138,14 @@ contract FootiuMM is IERC721Receiver {
         nftDeposits[msg.sender].push(NftDeposit(tokenId));
         nftsForSale.push(NftDeposit(1));
 
+        // Send ETH to the swapper
+        address payable recipient = payable(msg.sender);
+        recipient.transfer(salePrice); 
+
         // Emit event
         emit NftDeposited(msg.sender, dependencyAddress, tokenId);
     }
+    
 
     function ETHtoNFTSwap(uint256 _tokenId) external payable {
         uint256 salePrice = calculateTokenPrice();

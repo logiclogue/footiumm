@@ -53,9 +53,9 @@ describe("FootiuMM", function () {
         beforeEach(async function () {
             // Approve the contract to transfer the NFT
             await TestNFT.connect(user).approve(FootiuMM.target, 1); // Assuming tokenId 1
-
+            console.log(await FootiuMM.getContractBalance())
             // Perform NFT to ETH swap
-            const tx = await FootiuMM.connect(user).NFTtoETHSwap(1); // Assuming tokenId 1
+            await FootiuMM.connect(user).NFTtoETHSwap(1); // Assuming tokenId 1
 
         })
 
@@ -80,8 +80,10 @@ describe("FootiuMM", function () {
         beforeEach(async function () {
             // Approve the contract to transfer the NFT
             await TestNFT.connect(user).approve(FootiuMM.target, 1); // Assuming tokenId 1
+
             // Perform NFT to ETH swap
             await FootiuMM.connect(user).NFTtoETHSwap(1); // Assuming tokenId 1
+
             const SendValue = ethers.parseEther("0.05");
             await FootiuMM.connect(user).ETHtoNFTSwap(
                 1,
@@ -90,8 +92,8 @@ describe("FootiuMM", function () {
 
         })
 
-        it("adds 0.05ETH to the pool", async function () {    
-            expect(await FootiuMM.getContractBalance()).to.equal(100000000000000000n)  
+        it("adds 0.05ETH to the pool, providing a new balance of 0.15ET", async function () {    
+            expect(await FootiuMM.getContractBalance()).to.equal(150000000000000000n)  
         })    
     })
       
