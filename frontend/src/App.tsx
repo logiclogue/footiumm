@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ContextProvider, config } from './WagmiContextProvider';
-import { useAccount, useReadContract, useWatchContractEvent } from "wagmi";
-import { ethers } from 'ethers';
+import { useAccount, useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
+import * as ethers from 'ethers';
 import { useEthersProvider } from './ethers';
 import './App.css';
+
+const ENABLE_DONATIONS = true;
 
 function ConnectButton() {
     return <w3m-button />;
@@ -49,11 +51,13 @@ function useFetchMetadata(uri: string, isReady: boolean): any {
 }
 
 function Player({ tokenId }: { tokenId: string }) {
-    const { abi, address } = useLoadContract("FootiumPlayer");
+    const { writeContract } = useWriteContract();
+    const { abi: playerAbi, address: playerAddress } = useLoadContract("FootiumPlayer");
+    const { abi: footiummAbi, address: footiummAddress } = useLoadContract("FootiuMM");
 
     const { data, isSuccess } = (useReadContract as any)({
-        abi,
-        address,
+        abi: playerAbi,
+        address: playerAddress,
         functionName: 'tokenURI',
         args: [tokenId]
     });
@@ -64,9 +68,27 @@ function Player({ tokenId }: { tokenId: string }) {
         return <div>...</div>;
     }
 
-    const onSell = () => {
-        alert("You can't sell yet");
-    }
+    const onSell = (e: any) => {
+        e.preventDefault();
+
+        (writeContract as any)({
+            abi: footiummAbi,
+            address: footiummAddress,
+            functionName: "NFTtoETHSwap",
+            args: [parseInt(tokenId)]
+        });
+    };
+
+    const onDonate = (e: any) => {
+        e.preventDefault();
+
+        (writeContract as any)({
+            abi: footiummAbi,
+            address: footiummAddress,
+            functionName: "donateNft",
+            args: [parseInt(tokenId)]
+        });
+    };
 
     return (
         <div style={{ display: 'inline-block', textAlign: 'center' }}>
@@ -87,6 +109,9 @@ function Player({ tokenId }: { tokenId: string }) {
                 }}
             >
                 Sell 0.2 ETH
+            </button>
+            <button onClick={onDonate}>
+                Donate
             </button>
         </div>
     );
@@ -131,8 +156,6 @@ function Players() {
         }
     }, [provider, chain?.id]);
 
-    console.log("transferEvents", transferEvents);
-
     if (!transferEvents || transferEvents.length === 0) {
         return (
             <div>
@@ -169,6 +192,73 @@ function Players() {
     );
 }
 
+function DonateETH() {
+    const { isConnected } = useAccount();
+    const { writeContract } = useWriteContract();
+    const { address, abi } = useLoadContract("FootiuMM");
+
+    const handleDonate = (e: any) => {
+        e.preventDefault();
+        const amount = e.target.elements.amount.value;
+
+        (writeContract as any)({
+            abi,
+            address,
+            functionName: "donateEth",
+            value: ethers.parseUnits(amount, "ether")
+        });
+    };
+
+    if (!isConnected) {
+        return <div>...</div>;
+    }
+
+    return (
+        <form onSubmit={handleDonate}>
+            <input
+                type="text"
+                name="amount"
+                placeholder="ETH amount"
+                required
+            />
+            <button type="submit">Donate ETH</button>
+        </form>
+    );
+}
+
+function CurrentPool() {
+    const { isConnected } = useAccount();
+    const { address, abi } = useLoadContract("FootiuMM");
+
+    const { data: numNFTsData } = (useReadContract as any)({
+        address,
+        abi,
+        functionName: 'numNFTs',
+        watch: true
+    });
+
+    const { data: totalEthInBalanceData } = (useReadContract as any)({
+        address,
+        abi,
+        functionName: 'totalEthInBalance',
+        watch: true
+    });
+
+    const numNFTs = numNFTsData ? ethers.formatUnits(numNFTsData, 0) : 0;
+    const totalEthInBalance = totalEthInBalanceData ? ethers.formatEther(totalEthInBalanceData) : 0;
+
+    if (!isConnected) {
+        return <div>...</div>;
+    }
+
+    return (
+        <div>
+            <p>Number of NFTs: {numNFTs}</p>
+            <p>Total ETH in Balance: {totalEthInBalance}</p>
+        </div>
+    );
+}
+
 function App() {
     return (
         <ContextProvider>
@@ -176,7 +266,17 @@ function App() {
                 <header className="App-header">
                     <div>FootiuMM</div>
                     <ConnectButton />
-                    <h2>Sell NFTs:</h2>
+                    <h2>Current Pool</h2>
+                    <CurrentPool />
+                    {
+                        ENABLE_DONATIONS ?
+                        <div>
+                            <h2>Donate ETH</h2>
+                            <DonateETH />
+                        </div>
+                        : <div></div>
+                    }
+                    <h2>Sell NFTs</h2>
                     <Players />
                     <h2>Buy NFTs</h2>
                 </header>
