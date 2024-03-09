@@ -50,9 +50,16 @@ contract FootiuMM is IERC721Receiver {
 
 
     constructor(address _dependencyAddress, uint256 _decayRate) payable {
-        require(msg.value >= 0.1 ether, "Insufficient initial ETH sent");
         nftContract = ERC721(_dependencyAddress);
         decayRate = _decayRate;
+    }
+
+    function donateEth() payable {
+        totalEthInBalance += msg.value;
+    }
+
+    function donateNft(uint256 _tokenId) {
+        numNFTs += 1;
     }
 
     /* Implementing IERC721Receiver*/
