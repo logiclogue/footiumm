@@ -59,7 +59,6 @@ contract FootiuMM is IERC721Receiver {
         return currentSupply;
     }
 
-
     /*a user is selling an NFT to the contract*/
     function NFTtoETHSwap(uint256 tokenId) external {
         // Transfer the NFT to this contract
@@ -77,7 +76,6 @@ contract FootiuMM is IERC721Receiver {
         // Emit event
         emit NftDeposited(msg.sender, dependencyAddress, tokenId);
     }
-
 
     function ETHtoNFTSwap(uint256 _tokenId) external payable {
         uint256 salePrice = calculateTokenPrice();

@@ -22,11 +22,24 @@ describe("FootiuMM", function () {
             { value: SendValue } 
         ); 
 
+        // Mint an NFT to the user
+        await TestNFT.mint(user.address, 1);
+        await TestNFT.mint(user.address, 2);
+
     })
 
     it("should instantiate the NFT contract correctly", async function () {
         expect(await TestNFT.name()).to.equal("MyContractName")  
         expect(await TestNFT.symbol()).to.equal("MCN")
+    })
+    
+    it("should instantiate the AMM contract correctly", async function () {
+        expect(FootiuMM.target).to.not.equal(0x0);
+    })
+
+    it("user has 2 NFTS", async function (){
+        const userBalance = await TestNFT.balanceOf(user.address);
+        expect(userBalance).to.equal(2);
     })
 
     it("should start with 0.1ETH", async function () {
@@ -34,9 +47,26 @@ describe("FootiuMM", function () {
     })
 
     it("a user sells an NFT in return for 0.05ETH", async function () {
-        FootiuMM.getContractBalance()
+        // Approve the contract to transfer the NFT
+        await TestNFT.connect(user).approve(TestNFT.target, 1); // Assuming tokenId 1
+        // Get initial ETH balance of user
+        const initialUserBalance = await ethers.provider.getBalance(user.address);
+        // Check if the user owns the NFT
+        // Perform NFT to ETH swap
+        const tx = await FootiuMM.NFTtoETHSwap(1); // Assuming tokenId 1
+        
+        await expectEvent(tx, "NftDeposited", {
+            user: owner.address,
+            nftContract: TestNFT.target,
+            tokenId: 1
+        })
         //The smart contract's contract balance is updated 
         expect(await FootiuMM.getContractBalance()).to.equal(50000000000000000n)  
+        //The users's contract balance is updated 
+        const updatedUserBalance = await ethers.provider.getBalance(user.address);
+
+        expect(updatedUserBalance).to.equal(50000000000000000n) 
+
     })
       
 })
