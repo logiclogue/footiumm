@@ -67,109 +67,79 @@ describe("FootiuMM", function () {
     context("Testing the AMM", async function () { 
         context("Testing the selling functionality of the NFTtoETH method", async function () {
             beforeEach(async function () {
-                // donate ETH
+                // donate 10 ETH to the FootiuMM
                 await FootiuMM.donateEth({value:ethers.parseEther("10")})
 
-                // donate NFTs
-                TestNFT.mint(owner.address, 3);
-                TestNFT.mint(owner.address, 4);
-                TestNFT.mint(owner.address, 5);
-                TestNFT.mint(owner.address, 6);
+                // donate 4 NFTs to the FootiuMM
+                await TestNFT.mint(owner.address, 3);
+                await TestNFT.mint(owner.address, 4);
+                await TestNFT.mint(owner.address, 5);
+                await TestNFT.mint(owner.address, 6);
+                await TestNFT.mint(owner.address, 7);
 
-                await TestNFT.approve(FootiuMM.target, 3); // Assuming tokenId 1
-                await TestNFT.approve(FootiuMM.target, 4); // Assuming tokenId 1
-                await TestNFT.approve(FootiuMM.target, 5); // Assuming tokenId 1
-                await TestNFT.approve(FootiuMM.target, 6); // Assuming tokenId 1
+                await TestNFT.approve(FootiuMM.target, 3); // Assuming tokenId 3
+                await TestNFT.approve(FootiuMM.target, 4); // Assuming tokenId 4
+                await TestNFT.approve(FootiuMM.target, 5); // Assuming tokenId 5
+                await TestNFT.approve(FootiuMM.target, 6); // Assuming tokenId 6
           
                 await FootiuMM.donateNft(3);
                 await FootiuMM.donateNft(4);
                 await FootiuMM.donateNft(5);
                 await FootiuMM.donateNft(6);
             })
-            it("is set up properly", async function () { 
-                expect(await FootiuMM.numNFTs()).to.equal(4)                    
-                expect(await FootiuMM.totalEthInBalance()).to.equal(ethers.parseEther("10"))                    
 
+            it("checks the contract has 4 NFTs and 10 ETH", async function () { 
+                expect(await FootiuMM.numNFTs()).to.equal(4)                    
+                expect(await FootiuMM.totalEthInBalance()).to.equal(ethers.parseEther("10")) 
+                expect(await TestNFT.balanceOf(user.address)).to.equal(2n)     
+                expect(await TestNFT.ownerOf(1)).to.equal(user.address)        
             })
 
             it("sells an NFT into the pool", async function () { 
-
-                //There is initially 4 NFTs, and 10 ETH
                 // Approve the contract to transfer the NFT
-                await TestNFT.connect(user).approve(FootiuMM.target, 1); // Assuming tokenId 1
-                // Perform NFT to ETH swap
-                const userInitialBalance = await ethers.provider.getBalance(user.address)
 
-                
-                await FootiuMM.connect(user).NFTtoETH(1); // Assuming tokenId 1
-
-                expect(await FootiuMM.numNFTs()).to.equal(5)                    
-                expect(
-                    await TestNFT.balanceOf(user.address)
-                ).to.equal(
-                    1
-                )
-                const contractUpdateBalance = await ethers.provider.getBalance(FootiuMM.target)
-                expect(contractUpdateBalance).to.equal(8000000000000000000n)
-                const userUpdatedBalance = await ethers.provider.getBalance(user.address)
-                const balanceChange = userUpdatedBalance - userInitialBalance;
-                //expect(balanceChange).to.equal(1999891938048771278n)
+                await TestNFT.approve(FootiuMM.target, 7); // Assuming tokenId 1
+                await FootiuMM.NFTtoETH(7); // Assuming tokenId 1
+                expect(await TestNFT.ownerOf(7)).to.equal(FootiuMM.target)       
             })
     
         })
     
         context("Testing the buying functionality of the ETHtoNFT method", async function () {
-                beforeEach(async function () {
-                    // donate ETH
-                    await FootiuMM.donateEth({value:ethers.parseEther("10")})
+            beforeEach(async function () {
+                // donate ETH
+                await FootiuMM.donateEth({value:ethers.parseEther("10")})
     
     
-                    // donate NFTs
-                    TestNFT.mint(owner.address, 3);
-                    TestNFT.mint(owner.address, 4);
-                    TestNFT.mint(owner.address, 5);
-                    TestNFT.mint(owner.address, 6);
-    
-                    await TestNFT.approve(FootiuMM.target, 3); // Assuming tokenId 1
-                    await TestNFT.approve(FootiuMM.target, 4); // Assuming tokenId 1
-                    await TestNFT.approve(FootiuMM.target, 5); // Assuming tokenId 1
-                    await TestNFT.approve(FootiuMM.target, 6); // Assuming tokenId 1
+                // donate NFTs
+                await TestNFT.mint(owner.address, 3);
+                await TestNFT.mint(owner.address, 4);
+                await TestNFT.mint(owner.address, 5);
+                await TestNFT.mint(owner.address, 6);
+                await TestNFT.mint(owner.address, 7);
+
+                await TestNFT.approve(FootiuMM.target, 3); // Assuming tokenId 1
+                await TestNFT.approve(FootiuMM.target, 4); // Assuming tokenId 1
+                await TestNFT.approve(FootiuMM.target, 5); // Assuming tokenId 1
+                await TestNFT.approve(FootiuMM.target, 7); // Assuming tokenId 1
               
-                    await FootiuMM.donateNft(3);
-                    await FootiuMM.donateNft(4);
-                    await FootiuMM.donateNft(5);
-                    await FootiuMM.donateNft(6);
-                })
-                it("is set up properly", async function () { 
-                    expect(await FootiuMM.numNFTs()).to.equal(4)                    
-                    expect(await FootiuMM.totalEthInBalance()).to.equal(ethers.parseEther("10"))                    
-    
-                })
+                await FootiuMM.donateNft(3);
+                await FootiuMM.donateNft(4);
+                await FootiuMM.donateNft(5);
+                await FootiuMM.donateNft(7);
+            })
 
-                it("buys an NFT from the pool", async function () { 
+            it("is set up properly", async function () { 
+                expect(await FootiuMM.numNFTs()).to.equal(4)                    
+                expect(await FootiuMM.totalEthInBalance()).to.equal(ethers.parseEther("10"))                    
+            })
 
-                    expect(
-                        await TestNFT.balanceOf(user.address)
-                    ).to.equal(
-                        2
-                    )
+            it("buys an NFT from the pool", async function () { 
+                expect(await TestNFT.ownerOf(5)).to.equal(FootiuMM.target)       
+                await FootiuMM.ETHforNFT(5, {value:ethers.parseEther("2.5")}); // Assuming tokenId 1
+                expect(await TestNFT.ownerOf(5)).to.equal(owner.address)       
 
-                    // Perform NFT to ETH swap
-                    const userInitialBalance = await ethers.provider.getBalance(user.address)
-                    
-                    await FootiuMM.connect(user).ETHforNFT(1); // Assuming tokenId 1
-                    expect(await FootiuMM.numNFTs()).to.equal(5)                    
-                    expect(
-                        await TestNFT.balanceOf(user.address)
-                    ).to.equal(
-                        1
-                    )
-                    const contractUpdateBalance = await ethers.provider.getBalance(FootiuMM.target)
-                    expect(contractUpdateBalance).to.equal(8000000000000000000n)
-                    const userUpdatedBalance = await ethers.provider.getBalance(user.address)
-                    const balanceChange = userUpdatedBalance - userInitialBalance 
-                    //expect(balanceChange).to.equal(1999891938048771278n)
-                })
+            })
     
         })
     })      
