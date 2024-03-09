@@ -43,16 +43,15 @@ contract FootiuMM is IERC721Receiver {
         return IERC721Receiver.onERC721Received.selector;
     }
 
+    function nftPrice() external view {
+        return address(this).balance / numNFTs;
+    }
+
     //A player selling an NFT for ETH - receiving ETH
     function NFTtoETH(uint256 _tokenId) public {
+        uint256 ethPayout = nftPrice();
 
-        uint256 k_value = (
-            ForSaleNFTs.length * address(this).balance
-        );
-        
         numNFTs += 1;
-
-        uint256 ETHpayout = address(this).balance - (k_value/numNFTs);
 
         ForSaleNFTs.push(_tokenId);
 
@@ -63,21 +62,18 @@ contract FootiuMM is IERC721Receiver {
         );
 
         address payable recipient = payable(msg.sender);
-        recipient.transfer(ETHpayout);
+        recipient.transfer(ethPayout);
 
         emit PlayerforETH(recipient, _tokenId);
-
     }
+
     //A player buying an NFT with ETH - sending  ETH
     function ETHforNFT(uint256 _tokenId) public payable {
-        uint256 k_value = (
-            ForSaleNFTs.length * address(this).balance
-        );
         require(numNFTs > 1, "block");
 
-        numNFTs -= 1;
+        uint256 ethPrice = nftPrice();
 
-        uint256 ETHprice = address(this).balance - (k_value/numNFTs);
+        numNFTs -= 1;
 
         ForSaleNFTs.push(_tokenId);
 
