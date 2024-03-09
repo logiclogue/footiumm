@@ -20,7 +20,7 @@ const metadata = {
 };
 
 const chains = [arbitrum, arbitrumSepolia] as const;
-const config = defaultWagmiConfig({
+export const config = defaultWagmiConfig({
     chains, // required
     projectId, // required
     metadata, // required
