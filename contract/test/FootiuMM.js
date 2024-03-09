@@ -7,7 +7,10 @@ describe("FootiuMM", function () {
     let TestNFT;
 
     beforeEach(async function() {
+        [owner, user] = await ethers.getSigners();
+
         const Contract2 = await ethers.getContractFactory("TestNFT");
+
         TestNFT = await Contract2.deploy("MyContractName", "MCN");
     
         const Contract1 = await ethers.getContractFactory("FootiuMM");
@@ -28,6 +31,12 @@ describe("FootiuMM", function () {
 
     it("should start with 0.1ETH", async function () {
         expect(await FootiuMM.getContractBalance()).to.equal(100000000000000000n)  
+    })
+
+    it("a user sells an NFT in return for 0.05ETH", async function () {
+        FootiuMM.getContractBalance()
+        //The smart contract's contract balance is updated 
+        expect(await FootiuMM.getContractBalance()).to.equal(50000000000000000n)  
     })
       
 })

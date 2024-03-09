@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-
 // Uncomment this line to use console.log
 // import "hardhat/console.sol";
 
@@ -24,7 +23,9 @@ contract FootiuMM is IERC721Receiver {
 
     mapping(address => NftDeposit[]) public nftDeposits;
 
-    uint256 numNFTs;
+    uint256 public numNFTs;
+    uint256 public decayRate;
+    uint256 public startingPrice;
 
     NftDeposit[] public nftsForSale;
 
@@ -48,9 +49,8 @@ contract FootiuMM is IERC721Receiver {
     /*Bonding Curve Logic */
 
     // Calculate the price to buy NFTs based on the bonding curve 
-    function calculateTokenPurchase() public view returns (uint256) {
-        uint256 currentSupply = numNFTs;
-        return currentSupply;
+    function calculateTokenPrice() public view returns (uint256) {
+        return address(this).balance/2 ;
     }
 
     // Calculate the price to sell NFTs based on the bonding curve 
@@ -61,11 +61,12 @@ contract FootiuMM is IERC721Receiver {
 
 
     /*a user is selling an NFT to the contract*/
-    function SellNFT(uint256 tokenId) external {
+    function NFTtoETHSwap(uint256 tokenId) external {
         // Transfer the NFT to this contract
         IERC721(dependencyAddress).safeTransferFrom(msg.sender, address(this), tokenId);
 
-        uint256 salePrice = (address(this).balance)/2;
+        uint256 salePrice = calculateTokenPrice();
+
         require(address(this).balance >= salePrice, "Insufficient balance");
 
         payable(msg.sender).transfer(salePrice);
@@ -78,7 +79,11 @@ contract FootiuMM is IERC721Receiver {
     }
 
 
-    function buyNFT(uint256 _tokenId) external {
+    function ETHtoNFTSwap(uint256 _tokenId) external payable {
+        uint256 salePrice = calculateTokenPrice();
+
+        require(msg.value >= salePrice, "Insufficient payment");
+
         // Transfer ownership of the NFT to the buyer
         nftContract.transferFrom(address(this), msg.sender, _tokenId);
 
