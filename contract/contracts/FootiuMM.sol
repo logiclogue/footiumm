@@ -24,6 +24,8 @@ contract FootiuMM is IERC721Receiver {
 
     mapping(address => NftDeposit[]) public nftDeposits;
 
+    uint256 numNFTs;
+
     NftDeposit[] public nftsForSale;
 
     event Create(address indexed nft);
@@ -43,10 +45,30 @@ contract FootiuMM is IERC721Receiver {
         return IERC721Receiver.onERC721Received.selector;
     }
 
-    /*Core Application Logic */
+    /*Bonding Curve Logic */
+
+    // Calculate the price to buy NFTs based on the bonding curve 
+    function calculateTokenPurchase() public view returns (uint256) {
+        uint256 currentSupply = numNFTs;
+        return currentSupply;
+    }
+
+    // Calculate the price to sell NFTs based on the bonding curve 
+    function calculateTokenSale() public view returns (uint256) {
+        uint256 currentSupply = numNFTs;
+        return currentSupply;
+    }
+
+
+    /*a user is selling an NFT to the contract*/
     function SellNFT(uint256 tokenId) external {
         // Transfer the NFT to this contract
         IERC721(dependencyAddress).safeTransferFrom(msg.sender, address(this), tokenId);
+
+        uint256 salePrice = (address(this).balance)/2;
+        require(address(this).balance >= salePrice, "Insufficient balance");
+
+        payable(msg.sender).transfer(salePrice);
 
         // Store the deposited NFT
         nftDeposits[msg.sender].push(NftDeposit(tokenId));
@@ -57,10 +79,10 @@ contract FootiuMM is IERC721Receiver {
 
 
     function buyNFT(uint256 _tokenId) external {
-
         // Transfer ownership of the NFT to the buyer
         nftContract.transferFrom(address(this), msg.sender, _tokenId);
 
+        // Emit event
         emit NFTPurchased(msg.sender, _tokenId);
     }
 
