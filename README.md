@@ -18,9 +18,9 @@ Automated market maker for Footium
 
 - (done) Add a frontend React project
 - (done) Integrate wallet connect
-- (TODO) Integrate existing Arbitrum Sepolia Footium contracts
-- (TODO) Add a sell page which allows you to sell a player you own
-- (TODO) Add a buy page allows you to buy from the list of players you have
+- (done) Integrate existing Arbitrum Sepolia Footium contracts
+- (done) Add a sell page which allows you to sell a player you own
+- (done) Add a buy page allows you to buy from the list of players you have
 - (BLOCKED) Frontend selling directly to the smart contract
 - (BLOCKED) Frontend buying directly from the smart contract
 - (BLOCKED) Show a list of transactions on the platform, buy and sell
