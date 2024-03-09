@@ -17,5 +17,9 @@ describe("FootiuMM", function () {
         expect(await TestNFT.name()).to.equal("MyContractName")  
         expect(await TestNFT.symbol()).to.equal("MCN")
     })
+
+    it("should start with 0ETH", async function () {
+        expect(await FootiuMM.getContractBalance()).to.equal(0)  
+    })
       
 })
