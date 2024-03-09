@@ -19,6 +19,7 @@ describe("FootiuMM", function () {
 
         FootiuMM = await Contract1.deploy(
             TestNFT.target,
+            2,
             { value: SendValue } 
         ); 
 
@@ -65,6 +66,14 @@ describe("FootiuMM", function () {
         it("increments the number of NFTs on sale", async function () {    
             expect(await FootiuMM.getNFTsForSale()).to.equal(1)
         })    
+
+        it("triggers an auction", async function () {
+            expect(await FootiuMM.isAuction()).to.equal(true)   
+        })
+
+        it("creates an auction with starting price equal to 0.1ETH", async function () {
+            expect(await FootiuMM.startingPrice()).to.equal(ethers.parseEther("0.1"))   
+        })
     })
 
     context("Testing the functionality of the ETHtoNFT method", async function () {

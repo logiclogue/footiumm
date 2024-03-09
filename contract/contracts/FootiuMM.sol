@@ -20,23 +20,38 @@ contract FootiuMM is IERC721Receiver {
     struct NftDeposit {
         uint256 tokenId;
     }
+    struct Auction {
+        bool isAuction;
+        uint256 timeStart;
+    }
 
     mapping(address => NftDeposit[]) public nftDeposits;
 
+    Auction public currentAuction;
     uint256 public numNFTs;
     uint256 public decayRate;
     uint256 public startingPrice;
+    uint256 public currentPrice;
+
+    uint256 public totalEthInBalance;
+
+    uint256 public constant INITIAL_STARTING_PRICE = 1 ether;
+    uint256 public constant EXPONENT = 2; // Exponent for the exponential decay function
+
+    bool public isAuction;
 
     NftDeposit[] public nftsForSale;
 
     event Create(address indexed nft);
     event NftDeposited(address indexed user, address indexed nftContract, uint256 indexed tokenId);
     event NFTPurchased(address indexed user, uint256 indexed tokenId);
+    event AuctionCreated(uint256 indexed auctionId, address indexed seller, uint256 indexed tokenId, uint256 startingPrice, uint256 duration);
 
 
-    constructor(address _dependencyAddress) payable {
+    constructor(address _dependencyAddress, uint256 _decayRate) payable {
         require(msg.value >= 0.1 ether, "Insufficient initial ETH sent");
         nftContract = ERC721(_dependencyAddress);
+        decayRate = _decayRate;
     }
 
     /* Implementing IERC721Receiver*/
@@ -46,11 +61,37 @@ contract FootiuMM is IERC721Receiver {
         return IERC721Receiver.onERC721Received.selector;
     }
 
+
+    /* Dutch Auction Logic  */
+    function createAuction(uint256 _tokenId) internal {
+        startingPrice = address(this).balance;
+        currentAuction.isAuction = true;
+    }
+
+    function updateAuction(uint256 _tokenId) internal {
+        currentAuction.isAuction = true;
+    }
+
+    function closeAuction(uint256 _tokenId) internal {
+        currentAuction.isAuction = false;
+    }
+
+
     /*Bonding Curve Logic */
 
     // Calculate the price to buy NFTs based on the bonding curve 
-    function calculateTokenPrice() public view returns (uint256) {
-        return address(this).balance/2 ;
+    function calculateTokenPrice() public returns (uint256) {
+
+        /**
+            value >>= (t / halfLife);
+    t %= halfLife;
+    price = value - value * t / halfLife / 2;
+ */     
+        uint256 t = block.timestamp - currentAuction.timeStart;
+        currentPrice >>= (t / decayRate);
+
+        return currentPrice;
+
     }
 
     // Calculate the price to sell NFTs based on the bonding curve 
@@ -60,13 +101,24 @@ contract FootiuMM is IERC721Receiver {
     }
 
     /*a user is selling an NFT to the contract*/
-    function NFTtoETHSwap(uint256 tokenId) external {
+    function NFTtoETHSwap(uint256 tokenId) public {
         // Transfer the NFT to this contract
         nftContract.safeTransferFrom(msg.sender, address(this), tokenId);
 
         uint256 salePrice = calculateTokenPrice();
 
-        require(address(this).balance >= salePrice, "Insufficient balance");
+        require(
+            address(this).balance >= salePrice,
+            "Insufficient balance"
+        );
+
+        if (nftsForSale.length == 0) {
+            createAuction(
+                 tokenId
+                );
+        } else {
+            updateAuction(tokenId);
+        }
 
         payable(msg.sender).transfer(salePrice);
 
