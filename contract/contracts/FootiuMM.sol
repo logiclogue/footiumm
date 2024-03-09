@@ -22,11 +22,15 @@ contract FootiuMM is IERC721Receiver {
 
     mapping(address => NftDeposit[]) public nftDeposits;
 
+    NftDeposit[] public nftsForSale;
+
     event Create(address indexed nft);
     event NftDeposited(address indexed user, address indexed nftContract, uint256 indexed tokenId);
 
 
-    constructor(address _dependencyAddress) {
+    constructor(address _dependencyAddress) payable {
+        require(msg.value >= 0.1 ether, "Insufficient initial ETH sent");
+
         dependencyAddress = _dependencyAddress;
     }
 
@@ -38,12 +42,14 @@ contract FootiuMM is IERC721Receiver {
     }
 
     /*Core Application Logic */
-    function depositNft(uint256 tokenId) external {
+    function SellNFT(uint256 tokenId) external {
         // Transfer the NFT to this contract
         IERC721(dependencyAddress).safeTransferFrom(msg.sender, address(this), tokenId);
 
         // Store the deposited NFT
         nftDeposits[msg.sender].push(NftDeposit(tokenId));
+
+
 
         // Emit event
         emit NftDeposited(msg.sender, dependencyAddress, tokenId);
@@ -53,7 +59,6 @@ contract FootiuMM is IERC721Receiver {
     function getContractBalance() external view returns (uint256) {
         return address(this).balance;
     }
-
 
 
 }
