@@ -51,11 +51,13 @@ function useFetchMetadata(uri: string, isReady: boolean): any {
 }
 
 function Player({ tokenId }: { tokenId: string }) {
-    const { abi, address } = useLoadContract("FootiumPlayer");
+    const { writeContract } = useWriteContract();
+    const { abi: playerAbi, address: playerAddress } = useLoadContract("FootiumPlayer");
+    const { abi: footiummAbi, address: footiummAddress } = useLoadContract("FootiuMM");
 
     const { data, isSuccess } = (useReadContract as any)({
-        abi,
-        address,
+        abi: playerAbi,
+        address: playerAddress,
         functionName: 'tokenURI',
         args: [tokenId]
     });
@@ -66,9 +68,27 @@ function Player({ tokenId }: { tokenId: string }) {
         return <div>...</div>;
     }
 
-    const onSell = () => {
-        alert("You can't sell yet");
-    }
+    const onSell = (e: any) => {
+        e.preventDefault();
+
+        (writeContract as any)({
+            abi: footiummAbi,
+            address: footiummAddress,
+            functionName: "NFTtoETHSwap",
+            args: [parseInt(tokenId)]
+        });
+    };
+
+    const onDonate = (e: any) => {
+        e.preventDefault();
+
+        (writeContract as any)({
+            abi: footiummAbi,
+            address: footiummAddress,
+            functionName: "donateNft",
+            args: [parseInt(tokenId)]
+        });
+    };
 
     return (
         <div style={{ display: 'inline-block', textAlign: 'center' }}>
@@ -89,6 +109,9 @@ function Player({ tokenId }: { tokenId: string }) {
                 }}
             >
                 Sell 0.2 ETH
+            </button>
+            <button onClick={onDonate}>
+                Donate
             </button>
         </div>
     );
