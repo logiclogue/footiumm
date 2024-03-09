@@ -133,8 +133,6 @@ function Players() {
         }
     }, [provider, chain?.id]);
 
-    console.log("transferEvents", transferEvents);
-
     if (!transferEvents || transferEvents.length === 0) {
         return (
             <div>
@@ -206,7 +204,36 @@ function DonateETH() {
 }
 
 function CurrentPool() {
-    return <div>TODO</div>;
+    const { isConnected } = useAccount();
+    const { address, abi } = useLoadContract("FootiuMM");
+
+    const { data: numNFTsData } = (useReadContract as any)({
+        address,
+        abi,
+        functionName: 'numNFTs',
+        watch: true
+    });
+
+    const { data: totalEthInBalanceData } = (useReadContract as any)({
+        address,
+        abi,
+        functionName: 'totalEthInBalance',
+        watch: true
+    });
+
+    const numNFTs = numNFTsData ? ethers.formatUnits(numNFTsData, 0) : 0;
+    const totalEthInBalance = totalEthInBalanceData ? ethers.formatEther(totalEthInBalanceData) : 0;
+
+    if (!isConnected) {
+        return <div>...</div>;
+    }
+
+    return (
+        <div>
+            <p>Number of NFTs: {numNFTs}</p>
+            <p>Total ETH in Balance: {totalEthInBalance}</p>
+        </div>
+    );
 }
 
 function App() {
