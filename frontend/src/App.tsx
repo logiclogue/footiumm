@@ -51,7 +51,8 @@ function useFetchMetadata(uri: string, isReady: boolean): any {
 }
 
 function Player({ tokenId }: { tokenId: string }) {
-    const { writeContract } = useWriteContract();
+    const { writeContractAsync } = useWriteContract();
+    const { address } = useAccount();
     const { abi: playerAbi, address: playerAddress } = useLoadContract("FootiumPlayer");
     const { abi: footiummAbi, address: footiummAddress } = useLoadContract("FootiuMM");
 
@@ -62,32 +63,64 @@ function Player({ tokenId }: { tokenId: string }) {
         args: [tokenId]
     });
 
+    const { data: isApproved } = (useReadContract as any)({
+        abi: playerAbi,
+        address: playerAddress,
+        functionName: 'isApprovedForAll',
+        args: [address, footiummAddress]
+    });
+
     const metadata = useFetchMetadata(data, isSuccess);
 
     if (!metadata) {
         return <div>...</div>;
     }
 
-    const onSell = (e: any) => {
+    const onSell = async (e: any) => {
         e.preventDefault();
 
-        (writeContract as any)({
-            abi: footiummAbi,
-            address: footiummAddress,
-            functionName: "NFTtoETHSwap",
-            args: [parseInt(tokenId)]
-        });
+        if (!isApproved) {
+            try {
+                await (writeContractAsync as any)({
+                    abi: playerAbi,
+                    address: playerAddress,
+                    functionName: "setApprovalForAll",
+                    args: [footiummAddress, true]
+                });
+            } catch (error) {
+                alert("Failed to approve");
+
+                return;
+            }
+        }
+
+        try {
+            await (writeContractAsync as any)({
+                abi: footiummAbi,
+                address: footiummAddress,
+                functionName: "NFTtoETHSwap",
+                args: [parseInt(tokenId)]
+            });
+        } catch (error) {
+            alert("Failed to sell");
+        }
+
+        alert("result");
     };
 
-    const onDonate = (e: any) => {
+    const onDonate = async (e: any) => {
         e.preventDefault();
 
-        (writeContract as any)({
+        try {
+        await (writeContractAsync as any)({
             abi: footiummAbi,
             address: footiummAddress,
             functionName: "donateNft",
             args: [parseInt(tokenId)]
         });
+        } catch (error) {
+            alert("Failed to donate");
+        }
     };
 
     return (
@@ -110,9 +143,13 @@ function Player({ tokenId }: { tokenId: string }) {
             >
                 Sell 0.2 ETH
             </button>
-            <button onClick={onDonate}>
-                Donate
-            </button>
+            {
+                ENABLE_DONATIONS ?
+                <button onClick={onDonate}>
+                    Donate
+                </button>
+                : <div></div>
+            }
         </div>
     );
 }
