@@ -1,6 +1,6 @@
 require("hardhat-deploy");
 require("@nomicfoundation/hardhat-toolbox");
-
+require("@nomicfoundation/hardhat-chai-matchers")
 const config = {
     solidity: {
         compilers: [

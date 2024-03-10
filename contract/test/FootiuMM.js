@@ -95,12 +95,22 @@ describe("FootiuMM", function () {
                 expect(await TestNFT.ownerOf(1)).to.equal(user.address)        
             })
 
-            it("sells an NFT into the pool", async function () { 
+            it("sells the owner NFT into the pool", async function () { 
                 // Approve the contract to transfer the NFT
-
                 await TestNFT.approve(FootiuMM.target, 7); // Assuming tokenId 1
-                await FootiuMM.NFTtoETH(7); // Assuming tokenId 1
+                await expect(FootiuMM.NFTtoETH(7))
+                    .to.emit(FootiuMM, "PlayerforETH")
+                    .withArgs(owner.address, 7, ethers.parseEther("2"));
                 expect(await TestNFT.ownerOf(7)).to.equal(FootiuMM.target)       
+            })
+            
+            it("sells an user NFT into the pool", async function () { 
+                // Approve the contract to transfer the NFT
+                await TestNFT.connect(user).approve(FootiuMM.target, 1); // Assuming tokenId 1
+                await expect(FootiuMM.connect(user).NFTtoETH(1))
+                    .to.emit(FootiuMM, "PlayerforETH")
+                    .withArgs(user.address, 1, ethers.parseEther("2"));
+                expect(await TestNFT.ownerOf(1)).to.equal(FootiuMM.target)       
             })
     
         })
@@ -135,10 +145,21 @@ describe("FootiuMM", function () {
             })
 
             it("buys an NFT from the pool", async function () { 
-                expect(await TestNFT.ownerOf(5)).to.equal(FootiuMM.target)       
-                await FootiuMM.ETHforNFT(5, {value:ethers.parseEther("2.5")}); // Assuming tokenId 1
-                expect(await TestNFT.ownerOf(5)).to.equal(owner.address)       
+                expect(await TestNFT.ownerOf(5)).to.equal(FootiuMM.target)      
+                const tx = await expect(
+                    FootiuMM.connect(user).ETHforNFT(
+                        5, 
+                        {value:ethers.parseEther("3.34")}
+                        ))
+
+                console.log(tx)
+                
                 expect(await FootiuMM.getPlayersOnSale()).to.equal("3,4,7");
+
+                 // Assuming tokenId 1
+                console.log(await TestNFT.ownerOf(5))
+                console.log(FootiuMM.target)
+                expect(await TestNFT.ownerOf(5)).to.equal(owner.address)       
             })
     
         })

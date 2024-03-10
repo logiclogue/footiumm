@@ -13,7 +13,6 @@ contract FootiuMM is IERC721Receiver {
 
     using Address for address payable;
     ERC721 public nftContract;
-
     address public dependencyAddress;
 
     uint256 public numNFTs;
@@ -49,7 +48,8 @@ contract FootiuMM is IERC721Receiver {
         uint256 currentIndex = nftForSaleIndex[_playerId] - 1;
         ForSaleNFTs[currentIndex] = lastPlayer;
         nftForSaleIndex[lastPlayer] = currentIndex + 1;
-
+     
+        
         ForSaleNFTs.pop();
 
         delete nftForSaleIndex[_playerId];
@@ -90,14 +90,15 @@ contract FootiuMM is IERC721Receiver {
     }
 
     function sellPrice() public returns(uint256) {
-        uint256 k = address(this).balance * numNFTs;
+        uint256 k = totalEthInBalance * numNFTs;
 
-        return address(this).balance-(k/(numNFTs+1));
+        return totalEthInBalance-(k/(numNFTs+1));
     }
 
     function buyPrice() public returns(uint256) {
-        uint256 k = address(this).balance * numNFTs;
-        return k*(numNFTs-1)-address(this).balance;
+        uint256 k = totalEthInBalance * numNFTs;
+
+        return k/(numNFTs-1)-totalEthInBalance;
     }
 
     //A player selling an NFT for ETH - receiving ETH
@@ -120,22 +121,23 @@ contract FootiuMM is IERC721Receiver {
     }
     
     //A player buying an NFT with ETH - sending ETH
-    function ETHforNFT(uint256 _tokenId) public payable {
+    function ETHforNFT(uint256 _tokenId) public payable returns(uint256[]){
         require(numNFTs > 1, "block");
-
-        uint256 ethPrice = sellPrice();
+        uint256 ethPrice = buyPrice();
 
         require(msg.value >= ethPrice, "insufficient ETH");        
-
+ 
         removePlayerFromSale(_tokenId);
 
-        nftContract.transferFrom(
+        nftContract.safeTransferFrom(
             address(this), 
             msg.sender, 
             _tokenId
         );
 
         emit ETHforPlayer(msg.sender, _tokenId, ethPrice);
+
+        return ForSaleNFTs;
     }
 
     /* Implementing Getter Functions  */
