@@ -146,9 +146,4 @@ contract FootiuMM is IERC721Receiver {
     function getNFTsForSale() external view returns (uint256) {
         return ForSaleNFTs.length;
     }
-
-
-
 }
-
-
