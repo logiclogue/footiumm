@@ -3,6 +3,7 @@ import { ContextProvider, config } from './WagmiContextProvider';
 import { useAccount, useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
 import * as ethers from 'ethers';
 import { commify, useEthersProvider } from './ethers';
+import Decimal from "decimal.js";
 import './App.css';
 
 const ENABLE_DONATIONS = true;
@@ -181,7 +182,7 @@ function Player({ tokenId, isSelling, isBuying, isDonating }: { tokenId: string,
                     className="btn btn-success w-100 mt-2"
                     disabled={!sellPrice}
                 >
-                    {sellPrice ? `Sell ${ethers.formatEther(sellPrice.toString())} ETH` : "..."}
+                    {sellPrice ? `Sell ${new Decimal(ethers.formatEther(sellPrice.toString())).toPrecision(3)} ETH` : "..."}
                 </button>
             }
             {isBuying && 
@@ -190,7 +191,7 @@ function Player({ tokenId, isSelling, isBuying, isDonating }: { tokenId: string,
                     className="btn btn-success w-100 mt-2"
                     disabled={!buyPrice}
                 >
-                    {buyPrice ? `Buy ${ethers.formatEther(buyPrice.toString())} ETH` : "..."}
+                    {buyPrice ? `Buy ${new Decimal(ethers.formatEther(buyPrice.toString())).toPrecision(3)} ETH` : "..."}
                 </button>
             }
             {isDonating &&
@@ -208,6 +209,8 @@ function SellPlayers() {
     const player = useLoadContract("FootiumPlayer");
 
     const provider = useEthersProvider();
+
+    const count = useWatchSales();
 
     useEffect(() => {
         const fetchTransferEvents = async () => {
@@ -239,7 +242,7 @@ function SellPlayers() {
         if (chain?.id) {
             fetchTransferEvents();
         }
-    }, [provider, chain?.id]);
+    }, [provider, address, chain?.id, count]);
 
     if (!transferEvents || transferEvents.length === 0) {
         return (
@@ -270,7 +273,7 @@ function SellPlayers() {
     return (
         <div className="row">
             {playerIds.map(tokenId => (
-                <div className="col-md-4 col-sm-6 col-xs-12">
+                <div key={tokenId} className="col-md-4 col-sm-6 col-xs-12">
                     <Player tokenId={tokenId} isSelling={true} isDonating={ENABLE_DONATIONS} />
                 </div>
             ))}
@@ -282,10 +285,13 @@ function BuyPlayers() {
     const [playerIds, setPlayerIds] = useState<string[]>([]);
     const { abi, address } = useLoadContract("FootiuMM");
 
+    const count = useWatchSales();
+
     const { data: playersOnSaleString, isSuccess } = (useReadContract as any)({
         abi,
         address,
-        functionName: 'getPlayersOnSale'
+        functionName: 'getPlayersOnSale',
+        scopeKey: count
     });
 
     useEffect(() => {
@@ -294,12 +300,12 @@ function BuyPlayers() {
 
             setPlayerIds(result);
         }
-    }, [isSuccess]);
+    }, [isSuccess, count]);
 
     return (
         <div className="row">
             {playerIds.map(tokenId => (
-                <div className="col-md-4 col-sm-6 col-xs-12">
+                <div key={tokenId} className="col-md-4 col-sm-6 col-xs-12">
                     <Player tokenId={tokenId} isBuying={true} />
                 </div>
             ))}
@@ -342,23 +348,9 @@ function DonateETH() {
     );
 }
 
-function CurrentPool() {
-    const { isConnected } = useAccount();
+function useWatchSales() {
+    const [count, setCount] = useState(0);
     const { address, abi } = useLoadContract("FootiuMM");
-
-    const { data: numNFTsData } = (useReadContract as any)({
-        address,
-        abi,
-        functionName: 'numNFTs',
-        watch: true
-    });
-
-    const { data: totalEthInBalanceData } = (useReadContract as any)({
-        address,
-        abi,
-        functionName: 'totalEthInBalance',
-        watch: true
-    });
 
     (useWatchContractEvent as any)({
         address,
@@ -366,6 +358,7 @@ function CurrentPool() {
         eventName: 'PlayerforETH',
         onLogs(logs: any) {
             console.log('New logs!', logs)
+            setCount(count + 1);
         },
     });
 
@@ -375,7 +368,31 @@ function CurrentPool() {
         eventName: 'ETHforPlayer',
         onLogs(logs: any) {
             console.log('New logs!', logs)
-        },
+            setCount(count + 1);
+        }
+    });
+
+    return count;
+}
+
+function CurrentPool() {
+    const { isConnected } = useAccount();
+    const { address, abi } = useLoadContract("FootiuMM");
+
+    const count = useWatchSales();
+
+    const { data: numNFTsData } = (useReadContract as any)({
+        address,
+        abi,
+        functionName: 'numNFTs',
+        scopeKey: count
+    });
+
+    const { data: totalEthInBalanceData } = (useReadContract as any)({
+        address,
+        abi,
+        functionName: 'totalEthInBalance',
+        scopeKey: count
     });
 
     const numNFTs = numNFTsData ? ethers.formatUnits(numNFTsData, 0) : 0;
@@ -387,8 +404,8 @@ function CurrentPool() {
 
     return (
         <div className="text-left p-3 border rounded bg-light">
-            <p className="fs-5">Number of NFTs: {numNFTs}</p>
-            <p className="fs-5">Total ETH in Balance: {totalEthInBalance}</p>
+            <p className="fs-5">Total NFTs in Pool: {numNFTs}</p>
+            <p className="fs-5">Total ETH in Pool: {new Decimal(totalEthInBalance).toPrecision(3)}</p>
         </div>
     );
 }

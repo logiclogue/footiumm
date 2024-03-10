@@ -13,6 +13,7 @@
     "@wagmi/core": "^2.6.5",
     "@walletconnect/web3-provider": "^1.8.0",
     "@web3modal/wagmi": "^4.0.13",
+    "decimal.js": "^10.4.3",
     "ethers": "^6.11.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
