@@ -48,8 +48,7 @@ contract FootiuMM is IERC721Receiver {
         uint256 currentIndex = nftForSaleIndex[_playerId] - 1;
         ForSaleNFTs[currentIndex] = lastPlayer;
         nftForSaleIndex[lastPlayer] = currentIndex + 1;
-     
-        
+
         ForSaleNFTs.pop();
 
         delete nftForSaleIndex[_playerId];
@@ -121,7 +120,7 @@ contract FootiuMM is IERC721Receiver {
     }
     
     //A player buying an NFT with ETH - sending ETH
-    function ETHforNFT(uint256 _tokenId) public payable returns(uint256[]){
+    function ETHforNFT(uint256 _tokenId) public payable {
         require(numNFTs > 1, "block");
         uint256 ethPrice = buyPrice();
 
@@ -136,8 +135,6 @@ contract FootiuMM is IERC721Receiver {
         );
 
         emit ETHforPlayer(msg.sender, _tokenId, ethPrice);
-
-        return ForSaleNFTs;
     }
 
     /* Implementing Getter Functions  */
