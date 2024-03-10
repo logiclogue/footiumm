@@ -135,7 +135,7 @@ contract FootiuMM is IERC721Receiver {
             _tokenId
         );
 
-        emit ETHforPlayer(msg.sender, _tokenId, ethPayout);
+        emit ETHforPlayer(msg.sender, _tokenId, ethPrice);
     }
 
     /* Implementing Getter Functions  */
