@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ContextProvider, config } from './WagmiContextProvider';
 import { useAccount, useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
 import * as ethers from 'ethers';
-import { useEthersProvider } from './ethers';
+import { commify, useEthersProvider } from './ethers';
 import './App.css';
 
 const ENABLE_DONATIONS = true;
@@ -171,56 +171,32 @@ function Player({ tokenId, isSelling, isBuying, isDonating }: { tokenId: string,
     };
 
     return (
-        <div style={{ display: 'inline-block', textAlign: 'center' }}>
+        <div className="text-center mb-4">
             <a href={metadata.external_url} target="_blank" rel="noopener noreferrer">
-                <img src={metadata.image} alt={metadata.name} />
+                <img src={metadata.image} alt={metadata.name} className="img-fluid" />
             </a>
-            {
-                isSelling ?
+            {isSelling && 
                 <button
                     onClick={onSell}
-                    style={{
-                        width: '100%', // Makes the button span the width of the image
-                        padding: '10px',
-                        marginTop: '5px',
-                        backgroundColor: '#4CAF50', // Example color, change as needed
-                        color: 'white',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '1em'
-                    }}
+                    className="btn btn-success w-100 mt-2"
                     disabled={!sellPrice}
                 >
                     {sellPrice ? `Sell ${ethers.formatEther(sellPrice.toString())} ETH` : "..."}
                 </button>
-                : <div></div>
             }
-            {
-                isBuying ?
+            {isBuying && 
                 <button
                     onClick={onBuy}
-                    style={{
-                        width: '100%', // Makes the button span the width of the image
-                        padding: '10px',
-                        marginTop: '5px',
-                        backgroundColor: '#4CAF50', // Example color, change as needed
-                        color: 'white',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '1em'
-                    }}
+                    className="btn btn-success w-100 mt-2"
                     disabled={!buyPrice}
                 >
                     {buyPrice ? `Buy ${ethers.formatEther(buyPrice.toString())} ETH` : "..."}
                 </button>
-                : <div></div>
             }
-            {
-                isDonating ?
-                <button onClick={onDonate}>
+            {isDonating &&
+                <button onClick={onDonate} className="btn btn-info w-100 mt-2">
                     Donate
                 </button>
-                : <div></div>
             }
         </div>
     );
@@ -292,9 +268,11 @@ function SellPlayers() {
     }, {})).filter(entry => entry[1]).map(entry => entry[0]);
 
     return (
-        <div>
+        <div className="row">
             {playerIds.map(tokenId => (
-                <Player tokenId={tokenId} isSelling={true} isDonating={ENABLE_DONATIONS} />
+                <div className="col-md-4 col-sm-6 col-xs-12">
+                    <Player tokenId={tokenId} isSelling={true} isDonating={ENABLE_DONATIONS} />
+                </div>
             ))}
         </div>
     );
@@ -319,9 +297,11 @@ function BuyPlayers() {
     }, [isSuccess]);
 
     return (
-        <div>
+        <div className="row">
             {playerIds.map(tokenId => (
-                <Player tokenId={tokenId} isBuying={true} />
+                <div className="col-md-4 col-sm-6 col-xs-12">
+                    <Player tokenId={tokenId} isBuying={true} />
+                </div>
             ))}
         </div>
     );
@@ -349,14 +329,15 @@ function DonateETH() {
     }
 
     return (
-        <form onSubmit={handleDonate}>
+        <form onSubmit={handleDonate} className="mb-3">
             <input
                 type="text"
                 name="amount"
+                className="form-control mb-2"
                 placeholder="ETH amount"
                 required
             />
-            <button type="submit">Donate ETH</button>
+            <button type="submit" className="btn btn-primary">Donate ETH</button>
         </form>
     );
 }
@@ -379,6 +360,24 @@ function CurrentPool() {
         watch: true
     });
 
+    (useWatchContractEvent as any)({
+        address,
+        abi,
+        eventName: 'PlayerforETH',
+        onLogs(logs: any) {
+            console.log('New logs!', logs)
+        },
+    });
+
+    (useWatchContractEvent as any)({
+        address,
+        abi,
+        eventName: 'ETHforPlayer',
+        onLogs(logs: any) {
+            console.log('New logs!', logs)
+        },
+    });
+
     const numNFTs = numNFTsData ? ethers.formatUnits(numNFTsData, 0) : 0;
     const totalEthInBalance = totalEthInBalanceData ? ethers.formatEther(totalEthInBalanceData) : 0;
 
@@ -387,9 +386,9 @@ function CurrentPool() {
     }
 
     return (
-        <div>
-            <p>Number of NFTs: {numNFTs}</p>
-            <p>Total ETH in Balance: {totalEthInBalance}</p>
+        <div className="text-left p-3 border rounded bg-light">
+            <p className="fs-5">Number of NFTs: {numNFTs}</p>
+            <p className="fs-5">Total ETH in Balance: {totalEthInBalance}</p>
         </div>
     );
 }
@@ -398,24 +397,39 @@ function App() {
     return (
         <ContextProvider>
             <div className="App">
-                <header className="App-header">
-                    <div>FootiuMM</div>
-                    <ConnectButton />
-                    <h2>Current Pool</h2>
-                    <CurrentPool />
-                    {
-                        ENABLE_DONATIONS ?
-                        <div>
-                            <h2>Donate ETH</h2>
-                            <DonateETH />
+                <nav className="navbar navbar-dark bg-dark">
+                    <div className="container-fluid">
+                        <span className="navbar-brand mb-0 h1">FootiuMM</span>
+                        <ConnectButton />
+                    </div>
+                </nav>
+
+                <div className="container mt-4">
+                    <div className="row">
+                        <div className="col-md-6">
+                            <h2>Current Pool</h2>
+                            <CurrentPool />
                         </div>
-                        : <div></div>
-                    }
-                    <h2>Sell NFTs</h2>
-                    <SellPlayers />
-                    <h2>Buy NFTs</h2>
-                    <BuyPlayers />
-                </header>
+                        {ENABLE_DONATIONS && (
+                            <div className="col-md-6">
+                                <h2>Donate ETH</h2>
+                                <DonateETH />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="row">
+                        <div className="col-md-6">
+                            <h2>Sell NFTs</h2>
+                            <SellPlayers />
+                        </div>
+
+                        <div className="col-md-6">
+                            <h2>Buy NFTs</h2>
+                            <BuyPlayers />
+                        </div>
+                    </div>
+                </div>
             </div>
         </ContextProvider>
     );
