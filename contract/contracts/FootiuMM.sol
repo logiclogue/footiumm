@@ -21,8 +21,8 @@ contract FootiuMM is IERC721Receiver {
     uint256[] public ForSaleNFTs;
     mapping(uint256 => uint256) private nftForSaleIndex;
 
-    event PlayerforETH(address indexed user, uint256 indexed tokenId);
-    event ETHforPlayer(address indexed user, uint256 indexed tokenId);
+    event PlayerforETH(address indexed user, uint256 indexed tokenId, uint256 price);
+    event ETHforPlayer(address indexed user, uint256 indexed tokenId, uint256 price);
 
 
     constructor(address _dependencyAddress) payable {
@@ -116,7 +116,7 @@ contract FootiuMM is IERC721Receiver {
 
         recipient.transfer(ethPayout);
 
-        emit PlayerforETH(recipient, _tokenId);
+        emit PlayerforETH(recipient, _tokenId, ethPayout);
     }
     
     //A player buying an NFT with ETH - sending ETH
@@ -135,7 +135,7 @@ contract FootiuMM is IERC721Receiver {
             _tokenId
         );
 
-        emit ETHforPlayer(msg.sender, _tokenId);
+        emit ETHforPlayer(msg.sender, _tokenId, ethPayout);
     }
 
     /* Implementing Getter Functions  */
