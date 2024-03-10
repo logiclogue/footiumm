@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "hardhat/console.sol";
 
@@ -54,8 +55,14 @@ contract FootiuMM is IERC721Receiver {
         delete nftForSaleIndex[_playerId];
     }
 
-    function getPlayersOnSale() public view returns (uint256[] memory) {
-        return ForSaleNFTs;
+    function getPlayersOnSale() public view returns (string memory) {
+        bytes memory output = abi.encodePacked(Strings.toString(ForSaleNFTs[0]));
+
+        for (uint256 i = 1; i < ForSaleNFTs.length; i++) {
+            output = abi.encodePacked(output, ",", Strings.toString(ForSaleNFTs[i]));
+        }
+
+        return string(output);
     }
 
     function isPlayerOnSale(uint256 _playerId) public view returns (bool) {

@@ -138,7 +138,7 @@ describe("FootiuMM", function () {
                 expect(await TestNFT.ownerOf(5)).to.equal(FootiuMM.target)       
                 await FootiuMM.ETHforNFT(5, {value:ethers.parseEther("2.5")}); // Assuming tokenId 1
                 expect(await TestNFT.ownerOf(5)).to.equal(owner.address)       
-
+                expect(await FootiuMM.getPlayersOnSale()).to.equal("3,4,7");
             })
     
         })
