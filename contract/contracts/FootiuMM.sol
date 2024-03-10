@@ -18,6 +18,7 @@ contract FootiuMM is IERC721Receiver {
     uint256 public numNFTs;
     uint256 public totalEthInBalance; 
     uint256[] public ForSaleNFTs;
+    mapping(uint256 => uint256) private nftForSaleIndex;
 
     event PlayerforETH(address indexed user, uint256 indexed tokenId);
     event ETHforPlayer(address indexed user, uint256 indexed tokenId);
@@ -27,13 +28,46 @@ contract FootiuMM is IERC721Receiver {
         nftContract = ERC721(_dependencyAddress);
     }
 
+    function addPlayerToSale(uint256 _playerId) public {
+        require(nftForSaleIndex[_playerId] == 0, "Player already on sale");
+
+        numNFTs += 1;
+
+        ForSaleNFTs.push(_playerId);
+
+        nftForSaleIndex[_playerId] = ForSaleNFTs.length;
+    }
+
+    function removePlayerFromSale(uint256 _playerId) internal {
+        require(nftForSaleIndex[_playerId] != 0, "Player not on sale");
+
+        numNFTs -= 1;
+
+        uint256 lastIndex = ForSaleNFTs.length - 1;
+        uint256 lastPlayer = ForSaleNFTs[lastIndex];
+        uint256 currentIndex = nftForSaleIndex[_playerId] - 1;
+        ForSaleNFTs[currentIndex] = lastPlayer;
+        nftForSaleIndex[lastPlayer] = currentIndex + 1;
+
+        ForSaleNFTs.pop();
+
+        delete nftForSaleIndex[_playerId];
+    }
+
+    function getPlayersOnSale() public view returns (uint256[] memory) {
+        return ForSaleNFTs;
+    }
+
+    function isPlayerOnSale(uint256 _playerId) public view returns (bool) {
+        return nftForSaleIndex[_playerId] != 0;
+    }
+
     function donateEth() public payable {
         totalEthInBalance += msg.value;
     }
 
     function donateNft(uint256 _tokenId) public {
-        numNFTs += 1;
-        ForSaleNFTs.push(_tokenId); 
+        addPlayerToSale(_tokenId);
         nftContract.transferFrom(
             msg.sender, 
             address(this), 
@@ -48,24 +82,22 @@ contract FootiuMM is IERC721Receiver {
         return IERC721Receiver.onERC721Received.selector;
     }
 
-    function buyPrice() public returns(uint256) {
-        uint256 k = address(this).balance * numNFTs;
-        return k*(numNFTs-1)-address(this).balance;
-    }
-
     function sellPrice() public returns(uint256) {
         uint256 k = address(this).balance * numNFTs;
 
         return address(this).balance-(k/(numNFTs+1));
     }
 
-    //A player selling an NFT for ETH 
+    function buyPrice() public returns(uint256) {
+        uint256 k = address(this).balance * numNFTs;
+        return k*(numNFTs-1)-address(this).balance;
+    }
+
+    //A player selling an NFT for ETH - receiving ETH
     function NFTtoETH(uint256 _tokenId) public {
         uint256 ethPayout = sellPrice();
 
-        numNFTs += 1;
-
-        ForSaleNFTs.push(_tokenId);
+        addPlayerToSale(_tokenId);
 
         nftContract.safeTransferFrom(
             msg.sender, 
@@ -80,17 +112,15 @@ contract FootiuMM is IERC721Receiver {
         emit PlayerforETH(recipient, _tokenId);
     }
     
-    //A player buying an NFT with ETH 
+    //A player buying an NFT with ETH - sending ETH
     function ETHforNFT(uint256 _tokenId) public payable {
         require(numNFTs > 1, "block");
 
         uint256 ethPrice = sellPrice();
 
         require(msg.value >= ethPrice, "insufficient ETH");        
-        
-        numNFTs -= 1;
 
-        ForSaleNFTs.pop();
+        removePlayerFromSale(_tokenId);
 
         nftContract.transferFrom(
             address(this), 
@@ -98,7 +128,7 @@ contract FootiuMM is IERC721Receiver {
             _tokenId
         );
 
-        emit ETHforPlayer(recipient, _tokenId);
+        emit ETHforPlayer(msg.sender, _tokenId);
     }
 
     /* Implementing Getter Functions  */
