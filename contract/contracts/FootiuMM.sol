@@ -7,25 +7,29 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+import {PoolToken} from "./PoolToken.sol";
+
 import "hardhat/console.sol";
 
 contract FootiuMM is IERC721Receiver {
-
     using Address for address payable;
     ERC721 public nftContract;
+    PoolToken public poolToken;
     address public dependencyAddress;
 
     uint256 public numNFTs;
     uint256 public totalEthInBalance; 
+    uint256 public fee;
     uint256[] public ForSaleNFTs;
     mapping(uint256 => uint256) private nftForSaleIndex;
 
     event PlayerforETH(address indexed user, uint256 indexed tokenId, uint256 price);
     event ETHforPlayer(address indexed user, uint256 indexed tokenId, uint256 price);
 
-
-    constructor(address _dependencyAddress) payable {
+    constructor(address _dependencyAddress, PoolToken _poolToken) payable {
         nftContract = ERC721(_dependencyAddress);
+        poolToken = _poolToken;
+        fee = 10;
     }
 
     function addPlayerToSale(uint256 _playerId) public {
@@ -68,17 +72,41 @@ contract FootiuMM is IERC721Receiver {
         return nftForSaleIndex[_playerId] != 0;
     }
 
+    function getDonateEthTokens(uint256 _value) public returns(uint256) {
+        if (totalEthInBalance == 0) {
+            return 1;
+        }
+
+        return (_value * poolToken.totalSupply()) / (_value + 2 * totalEthInBalance);
+    }
+
     function donateEth() public payable {
+        uint256 tokens = getDonateEthTokens(msg.value);
+
         totalEthInBalance += msg.value;
+
+        poolToken.mint(msg.sender, tokens);
+    }
+
+    function getDonateNftTokens() public returns(uint256) {
+        if (numNFTs == 0) {
+            return 1;
+        }
+
+        return poolToken.totalSupply() / (1 + 2 * numNFTs);
     }
 
     function donateNft(uint256 _tokenId) public {
+        uint256 tokens = getDonateNftTokens();
+
         addPlayerToSale(_tokenId);
         nftContract.transferFrom(
             msg.sender, 
             address(this), 
             _tokenId
         );
+
+        poolToken.mint(msg.sender, tokens);
     }
 
     /* Implementing IERC721Receiver*/
@@ -97,7 +125,7 @@ contract FootiuMM is IERC721Receiver {
     function buyPrice() public returns(uint256) {
         uint256 k = totalEthInBalance * numNFTs;
 
-        return k/(numNFTs-1)-totalEthInBalance;
+        return (k/(numNFTs-1)-totalEthInBalance) * (100 + fee) / 100;
     }
 
     //A player selling an NFT for ETH - receiving ETH
@@ -139,6 +167,26 @@ contract FootiuMM is IERC721Receiver {
         totalEthInBalance += msg.value;
 
         emit ETHforPlayer(msg.sender, _tokenId, ethPrice);
+    }
+
+    function getTokenEthValue() public returns(uint256) {
+        if (poolToken.totalSupply() == 0) {
+            return 0;
+        }
+
+        return (1 / poolToken.totalSupply()) * (totalEthInBalance / 2);
+    }
+
+    function redeemTokenForEth(uint256 _tokens) public {
+        uint256 payout = getTokenEthValue() * _tokens;
+
+        poolToken.burnFrom(msg.sender, _tokens);
+
+        address payable recipient = payable(msg.sender);
+
+        totalEthInBalance -= payout;
+
+        recipient.transfer(payout);
     }
 
     /* Implementing Getter Functions  */

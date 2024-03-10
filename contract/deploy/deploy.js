@@ -4,13 +4,17 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy } = deployments;
     const { deployer } = await getNamedAccounts();
 
-    const result = await deploy('FootiuMM', {
+    const poolTokenResult = await deploy('PoolToken', {
         from: deployer,
-        args: ["0xD65f8B2f2Be08564764D6585B4700554b6596Da3"],
+        args: [deployer],
         log: true
     });
 
-    console.log("HERE", result);
+    const result = await deploy('FootiuMM', {
+        from: deployer,
+        args: ["0xD65f8B2f2Be08564764D6585B4700554b6596Da3", poolTokenResult.address],
+        log: true
+    });
 };
 
-module.exports.tags = ['FootiuMM'];
+module.exports.tags = ['FootiuMM', 'PoolToken'];
