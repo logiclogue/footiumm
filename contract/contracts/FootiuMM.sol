@@ -87,6 +87,7 @@ contract FootiuMM is IERC721Receiver {
         uint256 ethPrice = sellPrice();
 
         require(msg.value >= ethPrice, "insufficient ETH");        
+        
         numNFTs -= 1;
 
         ForSaleNFTs.pop();
@@ -96,10 +97,6 @@ contract FootiuMM is IERC721Receiver {
             msg.sender, 
             _tokenId
         );
-
-        address payable recipient = payable(msg.sender);
-
-        recipient.transfer(ethPrice);
 
         emit ETHforPlayer(recipient, _tokenId);
     }
