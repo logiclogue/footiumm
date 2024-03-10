@@ -19,7 +19,7 @@ const metadata = {
     icons: ['https://avatars.githubusercontent.com/u/37784886']
 };
 
-const chains = [arbitrum, arbitrumSepolia] as const;
+const chains = [arbitrumSepolia] as const;
 export const config = defaultWagmiConfig({
     chains, // required
     projectId, // required
@@ -40,7 +40,7 @@ createWeb3Modal({
 export function ContextProvider({ children }: any) {
     return (
         <WagmiProvider config={config}>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+            <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
         </WagmiProvider>
     )
 };
