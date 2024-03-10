@@ -70,6 +70,18 @@ function Player({ tokenId, isSelling, isBuying, isDonating }: { tokenId: string,
         args: [address, footiummAddress]
     });
 
+    const { data: sellPrice } = (useReadContract as any)({
+        abi: footiummAbi,
+        address: footiummAddress,
+        functionName: 'sellPrice'
+    });
+
+    const { data: buyPrice } = (useReadContract as any)({
+        abi: footiummAbi,
+        address: footiummAddress,
+        functionName: 'buyPrice'
+    });
+
     const metadata = useFetchMetadata(data, isSuccess);
 
     if (!metadata) {
@@ -176,8 +188,9 @@ function Player({ tokenId, isSelling, isBuying, isDonating }: { tokenId: string,
                         cursor: 'pointer',
                         fontSize: '1em'
                     }}
+                    disabled={!sellPrice}
                 >
-                    Sell 0.2 ETH
+                    {sellPrice ? `Sell ${ethers.parseUnits(sellPrice, "ethers")} ETH` : "..."}
                 </button>
                 : <div></div>
             }
@@ -195,8 +208,9 @@ function Player({ tokenId, isSelling, isBuying, isDonating }: { tokenId: string,
                         cursor: 'pointer',
                         fontSize: '1em'
                     }}
+                    disabled={!buyPrice}
                 >
-                    Buy 0.2 ETH
+                    {buyPrice ? `Buy ${ethers.parseUnits(buyPrice, "ethers")} ETH` : "..."}
                 </button>
                 : <div></div>
             }
