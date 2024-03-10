@@ -50,7 +50,7 @@ function useFetchMetadata(uri: string, isReady: boolean): any {
     return metadata;
 }
 
-function Player({ tokenId }: { tokenId: string }) {
+function Player({ tokenId, isSelling, isBuying, isDonating }: { tokenId: string, isSelling?: boolean, isBuying?: boolean, isDonating?: boolean }) {
     const { writeContractAsync } = useWriteContract();
     const { address } = useAccount();
     const { abi: playerAbi, address: playerAddress } = useLoadContract("FootiumPlayer");
@@ -88,6 +88,8 @@ function Player({ tokenId }: { tokenId: string }) {
                     args: [footiummAddress, true]
                 });
             } catch (error) {
+                console.error(error);
+
                 alert("Failed to approve");
 
                 return;
@@ -102,22 +104,54 @@ function Player({ tokenId }: { tokenId: string }) {
                 args: [parseInt(tokenId)]
             });
         } catch (error) {
+            console.error(error);
+
             alert("Failed to sell");
         }
+    };
 
-        alert("result");
+    const onBuy = async (e: any) => {
+        e.preventDefault();
+
+        try {
+            await (writeContractAsync as any)({
+                abi: footiummAbi,
+                address: footiummAddress,
+                functionName: "ETHtoNFTSwap",
+                args: [parseInt(tokenId)]
+            });
+        } catch (error) {
+            console.error(error);
+
+            alert("Failed to buy");
+        }
     };
 
     const onDonate = async (e: any) => {
         e.preventDefault();
 
+        if (!isApproved) {
+            try {
+                await (writeContractAsync as any)({
+                    abi: playerAbi,
+                    address: playerAddress,
+                    functionName: "setApprovalForAll",
+                    args: [footiummAddress, true]
+                });
+            } catch (error) {
+                alert("Failed to approve");
+
+                return;
+            }
+        }
+
         try {
-        await (writeContractAsync as any)({
-            abi: footiummAbi,
-            address: footiummAddress,
-            functionName: "donateNft",
-            args: [parseInt(tokenId)]
-        });
+            await (writeContractAsync as any)({
+                abi: footiummAbi,
+                address: footiummAddress,
+                functionName: "donateNft",
+                args: [parseInt(tokenId)]
+            });
         } catch (error) {
             alert("Failed to donate");
         }
@@ -128,23 +162,46 @@ function Player({ tokenId }: { tokenId: string }) {
             <a href={metadata.external_url} target="_blank" rel="noopener noreferrer">
                 <img src={metadata.image} alt={metadata.name} />
             </a>
-            <button
-                onClick={onSell}
-                style={{
-                    width: '100%', // Makes the button span the width of the image
-                    padding: '10px',
-                    marginTop: '5px',
-                    backgroundColor: '#4CAF50', // Example color, change as needed
-                    color: 'white',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '1em'
-                }}
-            >
-                Sell 0.2 ETH
-            </button>
             {
-                ENABLE_DONATIONS ?
+                isSelling ?
+                <button
+                    onClick={onSell}
+                    style={{
+                        width: '100%', // Makes the button span the width of the image
+                        padding: '10px',
+                        marginTop: '5px',
+                        backgroundColor: '#4CAF50', // Example color, change as needed
+                        color: 'white',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '1em'
+                    }}
+                >
+                    Sell 0.2 ETH
+                </button>
+                : <div></div>
+            }
+            {
+                isBuying ?
+                <button
+                    onClick={onBuy}
+                    style={{
+                        width: '100%', // Makes the button span the width of the image
+                        padding: '10px',
+                        marginTop: '5px',
+                        backgroundColor: '#4CAF50', // Example color, change as needed
+                        color: 'white',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '1em'
+                    }}
+                >
+                    Buy 0.2 ETH
+                </button>
+                : <div></div>
+            }
+            {
+                isDonating ?
                 <button onClick={onDonate}>
                     Donate
                 </button>
@@ -154,7 +211,7 @@ function Player({ tokenId }: { tokenId: string }) {
     );
 }
 
-function Players() {
+function SellPlayers() {
     const [transferEvents, setTransferEvents] = useState([]);
     const { address, chain } = useAccount();
     const player = useLoadContract("FootiumPlayer");
@@ -196,7 +253,6 @@ function Players() {
     if (!transferEvents || transferEvents.length === 0) {
         return (
             <div>
-                <h2>Sell NFTs:</h2>
                 <ul>
                     ...
                 </ul>
@@ -223,7 +279,34 @@ function Players() {
     return (
         <div>
             {playerIds.map(tokenId => (
-                <Player tokenId={tokenId} />
+                <Player tokenId={tokenId} isSelling={true} isDonating={ENABLE_DONATIONS} />
+            ))}
+        </div>
+    );
+}
+
+function BuyPlayers() {
+    const [playerIds, setPlayerIds] = useState<string[]>(["1"]);
+    const { abi, address } = useLoadContract("FootiuMM");
+
+    const { data: playersOnSaleString, isSuccess } = (useReadContract as any)({
+        abi,
+        address,
+        functionName: 'getPlayersOnSale'
+    });
+
+    useEffect(() => {
+        if (isSuccess) {
+            const result = playersOnSaleString.split(",");
+
+            setPlayerIds(result);
+        }
+    }, [isSuccess]);
+
+    return (
+        <div>
+            {playerIds.map(tokenId => (
+                <Player tokenId={tokenId} isBuying={true} />
             ))}
         </div>
     );
@@ -314,8 +397,9 @@ function App() {
                         : <div></div>
                     }
                     <h2>Sell NFTs</h2>
-                    <Players />
+                    <SellPlayers />
                     <h2>Buy NFTs</h2>
+                    <BuyPlayers />
                 </header>
             </div>
         </ContextProvider>
