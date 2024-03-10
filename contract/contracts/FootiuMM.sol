@@ -116,6 +116,8 @@ contract FootiuMM is IERC721Receiver {
 
         recipient.transfer(ethPayout);
 
+        totalEthInBalance -= ethPayout;
+
         emit PlayerforETH(recipient, _tokenId, ethPayout);
     }
     
@@ -133,6 +135,8 @@ contract FootiuMM is IERC721Receiver {
             msg.sender, 
             _tokenId
         );
+
+        totalEthInBalance += msg.value;
 
         emit ETHforPlayer(msg.sender, _tokenId, ethPrice);
     }

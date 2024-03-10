@@ -112,7 +112,7 @@ function Player({ tokenId, isSelling, isBuying, isDonating }: { tokenId: string,
             await (writeContractAsync as any)({
                 abi: footiummAbi,
                 address: footiummAddress,
-                functionName: "NFTtoETHSwap",
+                functionName: "NFTtoETH",
                 args: [parseInt(tokenId)]
             });
         } catch (error) {
@@ -129,8 +129,9 @@ function Player({ tokenId, isSelling, isBuying, isDonating }: { tokenId: string,
             await (writeContractAsync as any)({
                 abi: footiummAbi,
                 address: footiummAddress,
-                functionName: "ETHtoNFTSwap",
-                args: [parseInt(tokenId)]
+                functionName: "ETHforNFT",
+                args: [parseInt(tokenId)],
+                value: buyPrice
             });
         } catch (error) {
             console.error(error);
@@ -190,7 +191,7 @@ function Player({ tokenId, isSelling, isBuying, isDonating }: { tokenId: string,
                     }}
                     disabled={!sellPrice}
                 >
-                    {sellPrice ? `Sell ${ethers.parseUnits(sellPrice, "ethers")} ETH` : "..."}
+                    {sellPrice ? `Sell ${ethers.formatEther(sellPrice.toString())} ETH` : "..."}
                 </button>
                 : <div></div>
             }
@@ -210,7 +211,7 @@ function Player({ tokenId, isSelling, isBuying, isDonating }: { tokenId: string,
                     }}
                     disabled={!buyPrice}
                 >
-                    {buyPrice ? `Buy ${ethers.parseUnits(buyPrice, "ethers")} ETH` : "..."}
+                    {buyPrice ? `Buy ${ethers.formatEther(buyPrice.toString())} ETH` : "..."}
                 </button>
                 : <div></div>
             }
@@ -300,7 +301,7 @@ function SellPlayers() {
 }
 
 function BuyPlayers() {
-    const [playerIds, setPlayerIds] = useState<string[]>(["1"]);
+    const [playerIds, setPlayerIds] = useState<string[]>([]);
     const { abi, address } = useLoadContract("FootiuMM");
 
     const { data: playersOnSaleString, isSuccess } = (useReadContract as any)({
