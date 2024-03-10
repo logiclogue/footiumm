@@ -15,6 +15,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         args: ["0xD65f8B2f2Be08564764D6585B4700554b6596Da3", poolTokenResult.address],
         log: true
     });
+
+    const poolTokenContract = await ethers.getContractAt('PoolToken', poolTokenResult.address);
+
+    await poolTokenContract.transferOwnership(result.address);
 };
 
 module.exports.tags = ['FootiuMM', 'PoolToken'];

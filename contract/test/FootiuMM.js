@@ -4,6 +4,7 @@ const { ethers } = require("hardhat");
 describe("FootiuMM", function () {
     let FootiuMM;
     let TestNFT;
+    let PoolToken;
 
     beforeEach(async function() {
         [owner, user] = await ethers.getSigners();
@@ -11,14 +12,21 @@ describe("FootiuMM", function () {
         const Contract2 = await ethers.getContractFactory("TestNFT");
 
         TestNFT = await Contract2.deploy("MyContractName", "MCN");
+
+        const PoolTokenFactory = await ethers.getContractFactory("PoolToken");
+
+        PoolToken = await PoolTokenFactory.deploy(owner);
     
         const Contract1 = await ethers.getContractFactory("FootiuMM");
         
         const SendValue = ethers.parseEther("0.1");
 
         FootiuMM = await Contract1.deploy(
-            TestNFT.target
+            TestNFT.target,
+            PoolToken.target
         ); 
+
+        await PoolToken.transferOwnership(FootiuMM.target);
 
         // Mint an NFT to the user
         await TestNFT.mint(user.address, 1);
@@ -86,7 +94,14 @@ describe("FootiuMM", function () {
                 await FootiuMM.donateNft(4);
                 await FootiuMM.donateNft(5);
                 await FootiuMM.donateNft(6);
+
+                await FootiuMM.donateNft(6);
             })
+
+            it("has been awarded some pool tokens", async function () {
+                expect(await PoolToken.totalSupply()).to.equal(ethers.parseEther("1.828571428571428571"));
+                expect(await PoolToken.balanceOf(owner)).to.equal(ethers.parseEther("1.828571428571428571"));
+            });
 
             it("checks the contract has 4 NFTs and 10 ETH", async function () { 
                 expect(await FootiuMM.numNFTs()).to.equal(4)                    
@@ -149,7 +164,7 @@ describe("FootiuMM", function () {
                 expect(
                     await FootiuMM.connect(user).ETHforNFT(
                         5, 
-                        {value:ethers.parseEther("3.34")}
+                        {value:ethers.parseEther("3.9")}
                         ));
 
                 expect(await FootiuMM.getPlayersOnSale()).to.equal("3,4,7");

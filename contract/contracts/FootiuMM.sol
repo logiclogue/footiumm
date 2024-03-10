@@ -25,6 +25,9 @@ contract FootiuMM is IERC721Receiver {
 
     event PlayerforETH(address indexed user, uint256 indexed tokenId, uint256 price);
     event ETHforPlayer(address indexed user, uint256 indexed tokenId, uint256 price);
+    event TokenRedeemedForEth(address indexed user, uint256 tokens, uint256 eth);
+    event EthDonated(address indexed user, uint256 eth, uint256 tokens);
+    event PlayerDonated(address indexed user, uint256 tokenId, uint256 tokens);
 
     constructor(address _dependencyAddress, PoolToken _poolToken) payable {
         nftContract = ERC721(_dependencyAddress);
@@ -72,9 +75,9 @@ contract FootiuMM is IERC721Receiver {
         return nftForSaleIndex[_playerId] != 0;
     }
 
-    function getDonateEthTokens(uint256 _value) public returns(uint256) {
-        if (totalEthInBalance == 0) {
-            return 1;
+    function getDonateEthTokens(uint256 _value) public view returns (uint256) {
+        if (totalEthInBalance == 0 || poolToken.totalSupply() == 0) {
+            return 1 ether;
         }
 
         return (_value * poolToken.totalSupply()) / (_value + 2 * totalEthInBalance);
@@ -86,11 +89,13 @@ contract FootiuMM is IERC721Receiver {
         totalEthInBalance += msg.value;
 
         poolToken.mint(msg.sender, tokens);
+
+        emit EthDonated(msg.sender, msg.value, tokens);
     }
 
     function getDonateNftTokens() public returns(uint256) {
-        if (numNFTs == 0) {
-            return 1;
+        if (numNFTs == 0 || poolToken.totalSupply() == 0) {
+            return 1 ether;
         }
 
         return poolToken.totalSupply() / (1 + 2 * numNFTs);
@@ -107,6 +112,8 @@ contract FootiuMM is IERC721Receiver {
         );
 
         poolToken.mint(msg.sender, tokens);
+
+        emit PlayerDonated(msg.sender, _tokenId, tokens);
     }
 
     /* Implementing IERC721Receiver*/
@@ -169,16 +176,18 @@ contract FootiuMM is IERC721Receiver {
         emit ETHforPlayer(msg.sender, _tokenId, ethPrice);
     }
 
-    function getTokenEthValue() public returns(uint256) {
+    function getTokenEthValue() public view returns(uint256) {
         if (poolToken.totalSupply() == 0) {
             return 0;
         }
 
-        return (1 / poolToken.totalSupply()) * (totalEthInBalance / 2);
+        return (totalEthInBalance * 1 ether) / (2 * poolToken.totalSupply());
     }
 
     function redeemTokenForEth(uint256 _tokens) public {
-        uint256 payout = getTokenEthValue() * _tokens;
+        uint256 payout = getTokenEthValue() * _tokens / (1 ether);
+
+        require(totalEthInBalance - payout > 0, "Cannot draw the pool dry");
 
         poolToken.burnFrom(msg.sender, _tokens);
 
@@ -187,6 +196,8 @@ contract FootiuMM is IERC721Receiver {
         totalEthInBalance -= payout;
 
         recipient.transfer(payout);
+
+        emit TokenRedeemedForEth(msg.sender, _tokens, payout);
     }
 
     /* Implementing Getter Functions  */

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ContextProvider, config } from './WagmiContextProvider';
 import { useAccount, useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
 import * as ethers from 'ethers';
-import { commify, useEthersProvider } from './ethers';
+import { useEthersProvider } from './ethers';
 import Decimal from "decimal.js";
 import './App.css';
 
@@ -81,6 +81,12 @@ function Player({ tokenId, isSelling, isBuying, isDonating }: { tokenId: string,
         abi: footiummAbi,
         address: footiummAddress,
         functionName: 'buyPrice'
+    });
+
+    const { data: tokenPrice } = (useReadContract as any)({
+        abi: footiummAbi,
+        address: footiummAddress,
+        functionName: 'getDonateNftTokens'
     });
 
     const metadata = useFetchMetadata(data, isSuccess);
@@ -196,7 +202,7 @@ function Player({ tokenId, isSelling, isBuying, isDonating }: { tokenId: string,
             }
             {isDonating &&
                 <button onClick={onDonate} className="btn btn-info w-100 mt-2">
-                    Donate
+                    Swap {new Decimal(ethers.formatEther(tokenPrice)).toPrecision(3)} PT
                 </button>
             }
         </div>
@@ -315,14 +321,43 @@ function BuyPlayers() {
 
 function DonateETH() {
     const { isConnected } = useAccount();
-    const { writeContract } = useWriteContract();
+    const { writeContract, writeContractAsync } = useWriteContract();
     const { address, abi } = useLoadContract("FootiuMM");
+    const { address: tokenAddress, abi: tokenAbi } = useLoadContract("PoolToken");
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [buyTokenInputValue, setBuyTokenInputValue] = useState(BigInt(0));
+    const [sellTokenInputValue, setSellTokenInputValue] = useState(BigInt(0));
 
-    const handleDonate = (e: any) => {
+    const count = useWatchSales();
+
+    const { data: totalTokenSupply } = (useReadContract as any)({
+        address: tokenAddress,
+        abi: tokenAbi,
+        functionName: 'totalSupply',
+        scopeKey: count
+    });
+
+    const { data: tokenEthValue } = (useReadContract as any)({
+        address,
+        abi,
+        functionName: 'getDonateEthTokens',
+        args: [buyTokenInputValue],
+        scopeKey: count + buyTokenInputValue.toString()
+    });
+
+    const { data: ethValue } = (useReadContract as any)({
+        address,
+        abi,
+        functionName: 'getTokenEthValue',
+        args: [],
+        scopeKey: count + sellTokenInputValue.toString()
+    });
+
+    const handleBuy = async (e: any) => {
         e.preventDefault();
         const amount = e.target.elements.amount.value;
 
-        (writeContract as any)({
+        await (writeContractAsync as any)({
             abi,
             address,
             functionName: "donateEth",
@@ -330,21 +365,81 @@ function DonateETH() {
         });
     };
 
+    const handleSell = async (e: any) => {
+        e.preventDefault();
+        const amount = e.target.elements.amount.value;
+
+        try {
+            await (writeContractAsync as any)({
+                abi: tokenAbi,
+                address: tokenAddress,
+                functionName: "approve",
+                args: [address, ethers.parseUnits(amount, "ether")]
+            });
+        } catch (error) {
+            console.error(error);
+        }
+
+        await (writeContractAsync as any)({
+            abi,
+            address,
+            functionName: "redeemTokenForEth",
+            args: [ethers.parseUnits(amount, "ether")]
+        });
+    };
+    
+    const handleBuyChange = (event: any) => {
+        if (!isUpdating) {
+            setIsUpdating(true);
+
+            setTimeout(() => {
+                setBuyTokenInputValue(ethers.parseUnits(event.target.value || "0", "ether"));
+                setIsUpdating(false);
+            }, 1000);
+        }
+    };
+
+    const handleSellChange = (event: any) => {
+        if (!isUpdating) {
+            setIsUpdating(true);
+
+            setTimeout(() => {
+                setBuyTokenInputValue(ethers.parseUnits(event.target.value || "0", "ether"));
+                setIsUpdating(false);
+            }, 1000);
+        }
+    };
+
     if (!isConnected) {
         return <div>...</div>;
     }
 
     return (
-        <form onSubmit={handleDonate} className="mb-3">
-            <input
-                type="text"
-                name="amount"
-                className="form-control mb-2"
-                placeholder="ETH amount"
-                required
-            />
-            <button type="submit" className="btn btn-primary">Donate ETH</button>
-        </form>
+        <div className="text-left p-3 border rounded bg-light">
+            <div className="mb-3">Pool token (PT) holders will earn 10% of fees from player sales that accures to the value of your pool token. Your total PT represents your share of the pool.</div>
+            <p className="fs-5">Your pool tokens (PT): {new Decimal(ethers.formatEther(totalTokenSupply || 0)).toPrecision(3)}</p>
+            <form onSubmit={handleBuy} className="mb-3">
+                <input
+                    type="text"
+                    name="amount"
+                    className="form-control mb-2"
+                    placeholder="ETH amount"
+                    onChange={handleBuyChange}
+                    required
+                />
+                <button type="submit" className="btn btn-primary">Swap ETH for {new Decimal(ethers.formatEther(tokenEthValue || BigInt(0))).toPrecision(3)} PT</button>
+            </form>
+            <form onSubmit={handleSell} className="mb-3">
+                <input
+                    type="text"
+                    name="amount"
+                    className="form-control mb-2"
+                    placeholder="PT amount"
+                    required
+                />
+                <button type="submit" className="btn btn-primary">Swap 1 PT for {new Decimal(ethers.formatEther(ethValue || BigInt(0))).toPrecision(3)} ETH</button>
+            </form>
+        </div>
     );
 }
 
@@ -372,12 +467,43 @@ function useWatchSales() {
         }
     });
 
+    (useWatchContractEvent as any)({
+        address,
+        abi,
+        eventName: 'TokenRedeemedForEth',
+        onLogs(logs: any) {
+            console.log('New logs!', logs)
+            setCount(count + 1);
+        }
+    });
+
+    (useWatchContractEvent as any)({
+        address,
+        abi,
+        eventName: 'EthDonated',
+        onLogs(logs: any) {
+            console.log('New logs!', logs)
+            setCount(count + 1);
+        }
+    });
+
+    (useWatchContractEvent as any)({
+        address,
+        abi,
+        eventName: 'PlayerDonated',
+        onLogs(logs: any) {
+            console.log('New logs!', logs)
+            setCount(count + 1);
+        }
+    });
+
     return count;
 }
 
 function CurrentPool() {
     const { isConnected } = useAccount();
     const { address, abi } = useLoadContract("FootiuMM");
+    const { address: tokenAddress, abi: tokenAbi } = useLoadContract("PoolToken");
 
     const count = useWatchSales();
 
@@ -395,8 +521,15 @@ function CurrentPool() {
         scopeKey: count
     });
 
+    const { data: totalTokenSupply } = (useReadContract as any)({
+        address: tokenAddress,
+        abi: tokenAbi,
+        functionName: 'totalSupply',
+        scopeKey: count
+    });
+
     const numNFTs = numNFTsData ? ethers.formatUnits(numNFTsData, 0) : 0;
-    const totalEthInBalance = totalEthInBalanceData ? ethers.formatEther(totalEthInBalanceData) : 0;
+    const totalEthInBalance = totalEthInBalanceData ? ethers.formatEther(totalEthInBalanceData || 0) : 0;
 
     if (!isConnected) {
         return <div>...</div>;
@@ -406,6 +539,7 @@ function CurrentPool() {
         <div className="text-left p-3 border rounded bg-light">
             <p className="fs-5">Total NFTs in Pool: {numNFTs}</p>
             <p className="fs-5">Total ETH in Pool: {new Decimal(totalEthInBalance).toPrecision(3)}</p>
+            <p className="fs-5">Total pool tokens (PT): {new Decimal(ethers.formatEther(totalTokenSupply || "0")).toPrecision(3)}</p>
         </div>
     );
 }
@@ -429,7 +563,7 @@ function App() {
                         </div>
                         {ENABLE_DONATIONS && (
                             <div className="col-md-6">
-                                <h2>Donate ETH</h2>
+                                <h2>Earn</h2>
                                 <DonateETH />
                             </div>
                         )}
